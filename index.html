@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="BizCore - A powerful all-in-one business management platform for modern businesses."/>
+  <title>BizCore | Business Management Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="navbar.css"/>
+</head>
+<body>
+
+  <!-- ========== SIDEBAR NAVBAR ========== -->
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Brand Logo -->
+    <div class="sidebar-brand">
+      <div class="brand-logo">
+        <span class="logo-icon"><i class="fa-solid fa-chart-network"></i></span>
+      </div>
+      <div class="brand-text">
+        <h1 class="brand-name">BizCore</h1>
+        <p class="brand-tagline">Business Suite</p>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle Sidebar">
+        <i class="fa-solid fa-chevron-left" id="toggleIcon"></i>
+      </button>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="sidebar-search">
+      <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      <input type="text" id="navSearch" placeholder="Quick search..." autocomplete="off"/>
+      <span class="search-shortcut">⌘K</span>
+    </div>
+
+    <!-- Navigation Links -->
+    <nav class="sidebar-nav" aria-label="Main Navigation">
+      <p class="nav-section-title">Main Menu</p>
+
+      <ul class="nav-list">
+
+        <!-- Dashboard -->
+        <li class="nav-item active" id="nav-dashboard">
+          <a href="#dashboard" class="nav-link" data-tooltip="Dashboard">
+            <span class="nav-icon">
+              <i class="fa-solid fa-gauge-high"></i>
+              <span class="active-dot"></span>
+            </span>
+            <span class="nav-label">Dashboard</span>
+            <span class="nav-badge badge-new">New</span>
+          </a>
+        </li>
+
+        <!-- Accounts & Banking -->
+        <li class="nav-item has-submenu" id="nav-accounts">
+          <a href="#accounts" class="nav-link" data-tooltip="Accounts & Banking">
+            <span class="nav-icon">
+              <i class="fa-solid fa-building-columns"></i>
+            </span>
+            <span class="nav-label">Accounts & Banking</span>
+            <span class="nav-arrow"><i class="fa-solid fa-chevron-right"></i></span>
+          </a>
+          <ul class="submenu">
+            <li><a href="#bank-accounts"><i class="fa-solid fa-wallet"></i> Bank Accounts</a></li>
+            <li><a href="#cash-flow"><i class="fa-solid fa-money-bill-trend-up"></i> Cash Flow</a></li>
+            <li><a href="#reconciliation"><i class="fa-solid fa-scale-balanced"></i> Reconciliation</a></li>
+            <li><a href="#integrations"><i class="fa-solid fa-link"></i> Integrations</a></li>
+          </ul>
+        </li>
+
+        <!-- Transactions -->
+        <li class="nav-item has-submenu" id="nav-transactions">
+          <a href="#transactions" class="nav-link" data-tooltip="Transactions">
+            <span class="nav-icon">
+              <i class="fa-solid fa-arrow-right-arrow-left"></i>
+            </span>
+            <span class="nav-label">Transactions</span>
+            <span class="nav-arrow"><i class="fa-solid fa-chevron-right"></i></span>
+          </a>
+          <ul class="submenu">
+            <li><a href="#all-transactions"><i class="fa-solid fa-list-ul"></i> All Transactions</a></li>
+            <li><a href="#income"><i class="fa-solid fa-circle-down"></i> Income</a></li>
+            <li><a href="#expenses"><i class="fa-solid fa-circle-up"></i> Expenses</a></li>
+            <li><a href="#invoices"><i class="fa-solid fa-file-invoice"></i> Invoices</a></li>
+          </ul>
+        </li>
+
+        <!-- Reports & Analytics -->
+        <li class="nav-item has-submenu" id="nav-reports">
+          <a href="#reports" class="nav-link" data-tooltip="Reports & Analytics">
+            <span class="nav-icon">
+              <i class="fa-solid fa-chart-pie"></i>
+            </span>
+            <span class="nav-label">Reports & Analytics</span>
+            <span class="nav-arrow"><i class="fa-solid fa-chevron-right"></i></span>
+          </a>
+          <ul class="submenu">
+            <li><a href="#financial-report"><i class="fa-solid fa-file-chart-column"></i> Financial Report</a></li>
+            <li><a href="#profit-loss"><i class="fa-solid fa-chart-column"></i> Profit & Loss</a></li>
+            <li><a href="#balance-sheet"><i class="fa-solid fa-file-lines"></i> Balance Sheet</a></li>
+            <li><a href="#tax-report"><i class="fa-solid fa-receipt"></i> Tax Report</a></li>
+          </ul>
+        </li>
+
+      </ul>
+
+      <p class="nav-section-title">Settings</p>
+
+      <ul class="nav-list">
+
+        <!-- Subscription -->
+        <li class="nav-item" id="nav-subscription">
+          <a href="#subscription" class="nav-link" data-tooltip="Subscription">
+            <span class="nav-icon">
+              <i class="fa-solid fa-crown"></i>
+            </span>
+            <span class="nav-label">Subscription</span>
+            <span class="nav-badge badge-pro">PRO</span>
+          </a>
+        </li>
+
+        <!-- Business Profile -->
+        <li class="nav-item" id="nav-profile">
+          <a href="#business-profile" class="nav-link" data-tooltip="Business Profile">
+            <span class="nav-icon">
+              <i class="fa-solid fa-briefcase"></i>
+            </span>
+            <span class="nav-label">Business Profile</span>
+          </a>
+        </li>
+
+        <!-- Help & Support -->
+        <li class="nav-item" id="nav-help">
+          <a href="#help" class="nav-link" data-tooltip="Help & Support">
+            <span class="nav-icon">
+              <i class="fa-solid fa-circle-question"></i>
+            </span>
+            <span class="nav-label">Help & Support</span>
+          </a>
+        </li>
+
+      </ul>
+    </nav>
+
+    <!-- User Profile Footer -->
+    <div class="sidebar-footer">
+      <div class="user-avatar-ring">
+        <div class="user-avatar">NK</div>
+        <span class="status-dot online"></span>
+      </div>
+      <div class="user-info">
+        <p class="user-name">Nikunj Patel</p>
+        <p class="user-role">Admin</p>
+      </div>
+      <button class="logout-btn" id="logoutBtn" aria-label="Logout">
+        <i class="fa-solid fa-right-from-bracket"></i>
+      </button>
+    </div>
+
+  </aside>
+
+  <!-- ========== MOBILE TOP BAR ========== -->
+  <header class="mobile-topbar" id="mobileTopbar">
+    <button class="hamburger" id="hamburger" aria-label="Open Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="mobile-brand">
+      <i class="fa-solid fa-chart-network"></i>
+      <span>BizCore</span>
+    </div>
+    <div class="mobile-actions">
+      <button class="icon-btn" aria-label="Notifications"><i class="fa-solid fa-bell"></i></button>
+      <div class="mobile-avatar">NK</div>
+    </div>
+  </header>
+
+  <!-- Mobile Overlay -->
+  <div class="overlay" id="overlay"></div>
+
+  <!-- ========== MAIN CONTENT AREA ========== -->
+  <main class="main-content" id="mainContent">
+
+    <!-- Top Right Header Bar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="breadcrumb">
+          <span class="breadcrumb-root"><i class="fa-solid fa-house"></i></span>
+          <span class="breadcrumb-sep">/</span>
+          <span class="breadcrumb-current" id="breadcrumbCurrent">Dashboard</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-search">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" placeholder="Search anything..." id="topbarSearch"/>
+        </div>
+        <button class="icon-btn notif-btn" aria-label="Notifications" id="notifBtn">
+          <i class="fa-solid fa-bell"></i>
+          <span class="notif-count">3</span>
+        </button>
+        <button class="icon-btn" aria-label="Settings">
+          <i class="fa-solid fa-gear"></i>
+        </button>
+        <div class="topbar-avatar">
+          <div class="user-avatar small">NK</div>
+          <div class="topbar-user-info">
+            <span class="t-user-name">Nikunj Patel</span>
+            <span class="t-user-role">Admin</span>
+          </div>
+          <i class="fa-solid fa-chevron-down"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Page Content Container for SPA Views -->
+    <div class="page-content">
+      
+      <!-- ===================================== -->
+      <!-- VIEW: DASHBOARD                       -->
+      <!-- ===================================== -->
+      <div class="view-section active" id="view-dashboard">
+        <div class="welcome-card">
+          <div class="welcome-text">
+            <h2>Welcome back, Nikunj 👋</h2>
+            <p>Here's what's happening with your business today.</p>
+          </div>
+          <div class="welcome-date">
+            <i class="fa-regular fa-calendar"></i>
+            <span id="currentDate"></span>
+          </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="stats-grid">
+          <!-- 1. Income -->
+          <div class="stat-card">
+            <div class="stat-icon icon-green"><i class="fa-solid fa-circle-down"></i></div>
+            <div class="stat-info">
+              <p class="stat-label">Income</p>
+              <h3 class="stat-value">₹6,12,800</h3>
+              <p class="stat-change up"><i class="fa-solid fa-arrow-trend-up"></i> +8.2%</p>
+            </div>
+          </div>
+          <!-- 2. Expense -->
+          <div class="stat-card">
+            <div class="stat-icon icon-red"><i class="fa-solid fa-circle-up"></i></div>
+            <div class="stat-info">
+              <p class="stat-label">Expense</p>
+              <h3 class="stat-value">₹1,30,500</h3>
+              <p class="stat-change down"><i class="fa-solid fa-arrow-trend-down"></i> -3.1%</p>
+            </div>
+          </div>
+          <!-- 3. Bank Balance -->
+          <div class="stat-card">
+            <div class="stat-icon icon-blue"><i class="fa-solid fa-building-columns"></i></div>
+            <div class="stat-info">
+              <p class="stat-label">Bank Balance</p>
+              <h3 class="stat-value">₹4,50,000</h3>
+              <p class="stat-change neutral"><i class="fa-solid fa-minus"></i> Updated</p>
+            </div>
+          </div>
+          <!-- 4. Cash In Hand -->
+          <div class="stat-card">
+            <div class="stat-icon icon-green"><i class="fa-solid fa-wallet"></i></div>
+            <div class="stat-info">
+              <p class="stat-label">Cash In Hand</p>
+              <h3 class="stat-value">₹32,300</h3>
+              <p class="stat-change neutral"><i class="fa-solid fa-minus"></i> Updated</p>
+            </div>
+          </div>
+          <!-- 5. Total Purchase -->
+          <div class="stat-card">
+            <div class="stat-icon icon-purple"><i class="fa-solid fa-cart-shopping"></i></div>
+            <div class="stat-info">
+              <p class="stat-label">Total Purchase</p>
+              <h3 class="stat-value">₹85,000</h3>
+              <p class="stat-change up"><i class="fa-solid fa-arrow-trend-up"></i> +5.4%</p>
+            </div>
+          </div>
+          <!-- 6. Total Sales -->
+          <div class="stat-card">
+            <div class="stat-icon icon-blue"><i class="fa-solid fa-tags"></i></div>
+            <div class="stat-info">
+              <p class="stat-label">Total Sales</p>
+              <h3 class="stat-value">₹2,10,000</h3>
+              <p class="stat-change up"><i class="fa-solid fa-arrow-trend-up"></i> +11.2%</p>
+            </div>
+          </div>
+          <!-- 7. Personal Spending -->
+          <div class="stat-card">
+            <div class="stat-icon icon-red"><i class="fa-solid fa-user-tag"></i></div>
+            <div class="stat-info">
+              <p class="stat-label">Personal Spending</p>
+              <h3 class="stat-value">₹15,000</h3>
+              <p class="stat-change down"><i class="fa-solid fa-arrow-trend-down"></i> -2.0%</p>
+            </div>
+          </div>
+          <!-- 8. Personal Expense -->
+          <div class="stat-card">
+            <div class="stat-icon icon-red"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+            <div class="stat-info">
+              <p class="stat-label">Personal Expense</p>
+              <h3 class="stat-value">₹8,500</h3>
+              <p class="stat-change down"><i class="fa-solid fa-arrow-trend-down"></i> -1.5%</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================== -->
+      <!-- VIEW: ACCOUNTS & BANKING              -->
+      <!-- ===================================== -->
+      <div class="view-section" id="view-accounts">
+        <div class="section-header">
+          <h2 class="section-title">Manage Accounts</h2>
+          <div class="header-actions">
+            <button class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Account</button>
+          </div>
+        </div>
+        
+        <div class="banking-grid">
+          <div class="banking-card bank-primary">
+            <div class="bank-top">
+              <div class="bank-logo">HDFC</div>
+              <span class="bank-status">Primary</span>
+            </div>
+            <div class="bank-mid">
+              <p class="b-label">Available Balance</p>
+              <h2 class="b-amount">₹2,50,000</h2>
+            </div>
+            <div class="bank-bottom">
+              <p class="b-acct">**** **** 4589</p>
+              <div class="bank-actions">
+                <button class="btn-icon-circular text-success" title="Receive Money"><i class="fa-solid fa-arrow-down"></i></button>
+                <button class="btn-icon-circular text-danger" title="Send Money"><i class="fa-solid fa-arrow-up"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="banking-card">
+            <div class="bank-top">
+              <div class="bank-logo">SBI</div>
+            </div>
+            <div class="bank-mid">
+              <p class="b-label">Available Balance</p>
+              <h2 class="b-amount">₹1,20,000</h2>
+            </div>
+            <div class="bank-bottom">
+              <p class="b-acct">**** **** 1122</p>
+              <div class="bank-actions">
+                <button class="btn-icon-circular text-success" title="Receive Money"><i class="fa-solid fa-arrow-down"></i></button>
+                <button class="btn-icon-circular text-danger" title="Send Money"><i class="fa-solid fa-arrow-up"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="banking-card">
+            <div class="bank-top">
+              <div class="bank-logo">BOI</div>
+            </div>
+            <div class="bank-mid">
+              <p class="b-label">Available Balance</p>
+              <h2 class="b-amount">₹80,000</h2>
+            </div>
+            <div class="bank-bottom">
+              <p class="b-acct">**** **** 9988</p>
+              <div class="bank-actions">
+                <button class="btn-icon-circular text-success" title="Receive Money"><i class="fa-solid fa-arrow-down"></i></button>
+                <button class="btn-icon-circular text-danger" title="Send Money"><i class="fa-solid fa-arrow-up"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================== -->
+      <!-- VIEW: TRANSACTIONS                      -->
+      <!-- ===================================== -->
+      <div class="view-section" id="view-transactions">
+        <div class="section-header">
+          <h2 class="section-title">Transactions</h2>
+          <div class="header-actions">
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="txnSearch" placeholder="Search by name, ID..."/>
+            </div>
+            <button class="btn btn-outline"><i class="fa-solid fa-filter"></i> Filter</button>
+          </div>
+        </div>
+
+        <div class="data-table-container">
+          <table class="data-table" id="txnTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Transaction ID</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>10 Apr 2026</td>
+                <td>TXN-98432</td>
+                <td>Software License (Adobe)</td>
+                <td><span class="tag tag-expense">Expense</span></td>
+                <td class="text-danger">-₹8,500</td>
+                <td><span class="status-badge success">Completed</span></td>
+              </tr>
+              <tr>
+                <td>09 Apr 2026</td>
+                <td>TXN-98431</td>
+                <td>Client Payment (ABC Corp)</td>
+                <td><span class="tag tag-income">Income</span></td>
+                <td class="text-success">+₹45,000</td>
+                <td><span class="status-badge success">Completed</span></td>
+              </tr>
+              <tr>
+                <td>08 Apr 2026</td>
+                <td>TXN-98430</td>
+                <td>Office Supplies</td>
+                <td><span class="tag tag-expense">Purchase</span></td>
+                <td class="text-danger">-₹2,100</td>
+                <td><span class="status-badge pending">Pending</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===================================== -->
+      <!-- VIEW: INVOICES (ADD ITEM)             -->
+      <!-- ===================================== -->
+      <div class="view-section" id="view-invoice">
+        <div class="section-header">
+          <h2 class="section-title">Create Invoice / Bill</h2>
+          <div class="header-actions">
+            <button class="btn btn-outline" id="saveDraftBtn">Save Draft</button>
+            <button class="btn btn-primary" id="generateInvoiceBtn"><i class="fa-solid fa-print"></i> Generate</button>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label>Client / Company</label>
+              <select class="form-control" id="invoiceClient">
+                <option value="">Select a Client...</option>
+                <option value="abc">ABC Corporation</option>
+                <option value="xyz">XYZ Logistics</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Invoice Date</label>
+              <input type="date" class="form-control" id="invoiceDate" />
+            </div>
+          </div>
+
+          <div class="invoice-items-builder">
+            <h3 class="builder-title">Items</h3>
+            
+            <div class="item-entry-row">
+              <div class="form-group item-name">
+                <input type="text" id="invoiceItemName" placeholder="Item Name / Description" class="form-control" />
+              </div>
+              <div class="form-group item-qty">
+                <input type="number" id="invoiceItemQty" placeholder="Qty" class="form-control" />
+              </div>
+              <div class="form-group item-price">
+                <input type="number" id="invoiceItemPrice" placeholder="Price" class="form-control" />
+              </div>
+              <button class="btn-icon-circular btn-add-item bg-primary text-white" id="addItemBtn"><i class="fa-solid fa-plus"></i></button>
+            </div>
+
+            <!-- List of added items (Will be populated by JS) -->
+            <div class="added-items-list" id="addedItemsList">
+            </div>
+
+            <div class="invoice-totals">
+              <div class="tot-row"><span>Subtotal:</span> <span id="invoiceSubtotal">₹0</span></div>
+              <div class="tot-row"><span>Tax (18%):</span> <span id="invoiceTax">₹0</span></div>
+              <div class="tot-row grand-total"><span>Total:</span> <span id="invoiceTotal">₹0</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================== -->
+      <!-- VIEW: SUBSCRIPTION                    -->
+      <!-- ===================================== -->
+      <div class="view-section" id="view-subscription">
+        <div class="section-header center">
+          <h2 class="section-title">Upgrade Your Plan</h2>
+          <p class="section-sub">Choose a plan that fits your business needs.</p>
+          <div class="plan-toggle">
+            <button class="t-btn active" data-period="monthly">Monthly</button>
+            <button class="t-btn" data-period="yearly">Yearly <span class="badge-save">Save 20%</span></button>
+          </div>
+        </div>
+        
+        <div class="pricing-grid">
+          <!-- Basic Plan -->
+          <div class="price-card">
+            <div class="p-header">
+              <h3>Basic Plan</h3>
+              <div class="p-price">₹499<span>/mo</span></div>
+            </div>
+            <ul class="p-features">
+               <li><i class="fa-solid fa-check text-success"></i> Manage up to 50 Invoices</li>
+               <li><i class="fa-solid fa-check text-success"></i> Basic Reporting</li>
+               <li><i class="fa-solid fa-check text-success"></i> 1 User Account</li>
+               <li class="unavailable"><i class="fa-solid fa-xmark"></i> Premium Support</li>
+            </ul>
+            <button class="btn btn-outline w-100">Current Plan</button>
+          </div>
+
+          <!-- Premium Plan -->
+          <div class="price-card popular">
+            <div class="popular-badge">Most Popular</div>
+            <div class="p-header">
+              <h3>Premium Plan</h3>
+              <div class="p-price">₹999<span>/mo</span></div>
+            </div>
+            <ul class="p-features">
+               <li><i class="fa-solid fa-check text-success"></i> Unlimited Invoices</li>
+               <li><i class="fa-solid fa-check text-success"></i> Advanced Analytics</li>
+               <li><i class="fa-solid fa-check text-success"></i> Up to 5 User Accounts</li>
+               <li><i class="fa-solid fa-check text-success"></i> Priority 24/7 Support</li>
+            </ul>
+            <button class="btn btn-primary w-100">Upgrade to Premium</button>
+          </div>
+
+          <!-- Enterprise Plan -->
+          <div class="price-card">
+            <div class="p-header">
+              <h3>Enterprise Plan</h3>
+              <div class="p-price">₹2,499<span>/mo</span></div>
+            </div>
+            <ul class="p-features">
+               <li><i class="fa-solid fa-check text-success"></i> Everything in Premium</li>
+               <li><i class="fa-solid fa-check text-success"></i> Unlimited Users</li>
+               <li><i class="fa-solid fa-check text-success"></i> Custom Integrations</li>
+               <li><i class="fa-solid fa-check text-success"></i> Dedicated Account Manager</li>
+            </ul>
+            <button class="btn btn-outline w-100">Contact Sales</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================== -->
+      <!-- VIEW: BUSINESS PROFILE                -->
+      <!-- ===================================== -->
+      <div class="view-section" id="view-profile">
+        <div class="section-header">
+          <h2 class="section-title">Business Profile</h2>
+        </div>
+
+        <div class="profile-layout">
+          <div class="profile-sidebar">
+            <div class="profile-logo-upload">
+              <div class="p-logo-preview">
+                <i class="fa-solid fa-building"></i>
+              </div>
+              <button class="btn btn-outline w-100"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Logo</button>
+            </div>
+          </div>
+          
+          <div class="profile-form-area form-card">
+            <div class="form-group mb-4">
+              <label>Business Name</label>
+              <input type="text" id="profileName" class="form-control" value="Nikunj Technologies Pvt Ltd" />
+            </div>
+            <div class="form-group mb-4">
+              <label>Business Type</label>
+              <select id="profileType" class="form-control">
+                <option>Information Technology</option>
+                <option>Retail</option>
+                <option>Manufacturing</option>
+                <option>Services</option>
+              </select>
+            </div>
+            <div class="form-group mb-4">
+              <label>Tax Identification Number (GSTIN)</label>
+              <input type="text" id="profileGSTIN" class="form-control" value="24AAAAA0000A1Z5" />
+            </div>
+            <div class="form-group mb-4">
+              <label>Registered Address</label>
+              <textarea id="profileAddress" class="form-control" rows="3">123 Tech Park, Phase 1, Startup Hub, City - 400001</textarea>
+            </div>
+            <button id="saveProfileBtn" class="btn btn-primary">Save Changes</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="navbar.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
