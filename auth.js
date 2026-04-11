@@ -27,7 +27,7 @@ const Auth = {
         } else {
           reject('Invalid email or password.');
         }
-      }, 1000);
+      }, 100);
     });
   },
 

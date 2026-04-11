@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         setTimeout(() => {
           window.location.reload(); 
-        }, 800);
+        }, 100);
 
       } catch (err) {
         showToast(err, 'error');

@@ -296,6 +296,12 @@
           </div>
         </div>
 
+        <!-- Quick Actions -->
+        <div class="quick-actions" style="display:flex; gap:12px; margin-bottom:24px;">
+          <button class="btn btn-primary" onclick="window.switchView('income')"><i class="fa-solid fa-circle-down"></i> Add Income</button>
+          <button class="btn btn-danger" onclick="window.switchView('expenses')"><i class="fa-solid fa-circle-up"></i> Add Expense</button>
+        </div>
+
         <!-- Quick Stats -->
         <div class="stats-grid">
           <!-- 1. Income -->
@@ -303,8 +309,8 @@
             <div class="stat-icon icon-green"><i class="fa-solid fa-circle-down"></i></div>
             <div class="stat-info">
               <p class="stat-label">Income</p>
-              <h3 class="stat-value">₹6,12,800</h3>
-              <p class="stat-change up"><i class="fa-solid fa-arrow-trend-up"></i> +8.2%</p>
+              <h3 class="stat-value">₹0</h3>
+              <p class="stat-change neutral"><i class="fa-solid fa-minus"></i> 0%</p>
             </div>
           </div>
           <!-- 2. Expense -->
@@ -312,8 +318,8 @@
             <div class="stat-icon icon-red"><i class="fa-solid fa-circle-up"></i></div>
             <div class="stat-info">
               <p class="stat-label">Expense</p>
-              <h3 class="stat-value">₹1,30,500</h3>
-              <p class="stat-change down"><i class="fa-solid fa-arrow-trend-down"></i> -3.1%</p>
+              <h3 class="stat-value">₹0</h3>
+              <p class="stat-change neutral"><i class="fa-solid fa-minus"></i> 0%</p>
             </div>
           </div>
           <!-- 3. Bank Balance -->
@@ -321,8 +327,8 @@
             <div class="stat-icon icon-blue"><i class="fa-solid fa-building-columns"></i></div>
             <div class="stat-info">
               <p class="stat-label">Bank Balance</p>
-              <h3 class="stat-value">₹4,50,000</h3>
-              <p class="stat-change neutral"><i class="fa-solid fa-minus"></i> Updated</p>
+              <h3 class="stat-value">₹0</h3>
+              <p class="stat-change neutral"><i class="fa-solid fa-minus"></i> 0%</p>
             </div>
           </div>
           <!-- 4. Cash In Hand -->
@@ -330,8 +336,8 @@
             <div class="stat-icon icon-green"><i class="fa-solid fa-wallet"></i></div>
             <div class="stat-info">
               <p class="stat-label">Cash In Hand</p>
-              <h3 class="stat-value">₹32,300</h3>
-              <p class="stat-change neutral"><i class="fa-solid fa-minus"></i> Updated</p>
+              <h3 class="stat-value">₹0</h3>
+              <p class="stat-change neutral"><i class="fa-solid fa-minus"></i> 0%</p>
             </div>
           </div>
           <!-- 5. Total Purchase -->
@@ -339,8 +345,8 @@
             <div class="stat-icon icon-purple"><i class="fa-solid fa-cart-shopping"></i></div>
             <div class="stat-info">
               <p class="stat-label">Total Purchase</p>
-              <h3 class="stat-value">₹85,000</h3>
-              <p class="stat-change up"><i class="fa-solid fa-arrow-trend-up"></i> +5.4%</p>
+              <h3 class="stat-value">₹0</h3>
+              <p class="stat-change neutral"><i class="fa-solid fa-minus"></i> 0%</p>
             </div>
           </div>
           <!-- 6. Total Sales -->
@@ -348,8 +354,8 @@
             <div class="stat-icon icon-blue"><i class="fa-solid fa-tags"></i></div>
             <div class="stat-info">
               <p class="stat-label">Total Sales</p>
-              <h3 class="stat-value">₹2,10,000</h3>
-              <p class="stat-change up"><i class="fa-solid fa-arrow-trend-up"></i> +11.2%</p>
+              <h3 class="stat-value">₹0</h3>
+              <p class="stat-change neutral"><i class="fa-solid fa-minus"></i> 0%</p>
             </div>
           </div>
           <!-- 7. Personal Spending -->
@@ -357,8 +363,8 @@
             <div class="stat-icon icon-red"><i class="fa-solid fa-user-tag"></i></div>
             <div class="stat-info">
               <p class="stat-label">Personal Spending</p>
-              <h3 class="stat-value">₹15,000</h3>
-              <p class="stat-change down"><i class="fa-solid fa-arrow-trend-down"></i> -2.0%</p>
+              <h3 class="stat-value">₹0</h3>
+              <p class="stat-change neutral"><i class="fa-solid fa-minus"></i> 0%</p>
             </div>
           </div>
           <!-- 8. Personal Expense -->
@@ -366,8 +372,8 @@
             <div class="stat-icon icon-red"><i class="fa-solid fa-file-invoice-dollar"></i></div>
             <div class="stat-info">
               <p class="stat-label">Personal Expense</p>
-              <h3 class="stat-value">₹8,500</h3>
-              <p class="stat-change down"><i class="fa-solid fa-arrow-trend-down"></i> -1.5%</p>
+              <h3 class="stat-value">₹0</h3>
+              <p class="stat-change neutral"><i class="fa-solid fa-minus"></i> 0%</p>
             </div>
           </div>
         </div>
@@ -387,15 +393,15 @@
         <div class="banking-grid">
           <div class="banking-card bank-primary">
             <div class="bank-top">
-              <div class="bank-logo">HDFC</div>
+              <div class="bank-logo">Bank 1</div>
               <span class="bank-status">Primary</span>
             </div>
             <div class="bank-mid">
               <p class="b-label">Available Balance</p>
-              <h2 class="b-amount">₹2,50,000</h2>
+              <h2 class="b-amount">₹0</h2>
             </div>
             <div class="bank-bottom">
-              <p class="b-acct">**** **** 4589</p>
+              <p class="b-acct">**** **** ****</p>
               <div class="bank-actions">
                 <button class="btn-icon-circular text-success" title="Receive Money"><i class="fa-solid fa-arrow-down"></i></button>
                 <button class="btn-icon-circular text-danger" title="Send Money"><i class="fa-solid fa-arrow-up"></i></button>
@@ -405,14 +411,14 @@
 
           <div class="banking-card">
             <div class="bank-top">
-              <div class="bank-logo">SBI</div>
+              <div class="bank-logo">Bank 2</div>
             </div>
             <div class="bank-mid">
               <p class="b-label">Available Balance</p>
-              <h2 class="b-amount">₹1,20,000</h2>
+              <h2 class="b-amount">₹0</h2>
             </div>
             <div class="bank-bottom">
-              <p class="b-acct">**** **** 1122</p>
+              <p class="b-acct">**** **** ****</p>
               <div class="bank-actions">
                 <button class="btn-icon-circular text-success" title="Receive Money"><i class="fa-solid fa-arrow-down"></i></button>
                 <button class="btn-icon-circular text-danger" title="Send Money"><i class="fa-solid fa-arrow-up"></i></button>
@@ -422,14 +428,14 @@
 
           <div class="banking-card">
             <div class="bank-top">
-              <div class="bank-logo">BOI</div>
+              <div class="bank-logo">Bank 3</div>
             </div>
             <div class="bank-mid">
               <p class="b-label">Available Balance</p>
-              <h2 class="b-amount">₹80,000</h2>
+              <h2 class="b-amount">₹0</h2>
             </div>
             <div class="bank-bottom">
-              <p class="b-acct">**** **** 9988</p>
+              <p class="b-acct">**** **** ****</p>
               <div class="bank-actions">
                 <button class="btn-icon-circular text-success" title="Receive Money"><i class="fa-solid fa-arrow-down"></i></button>
                 <button class="btn-icon-circular text-danger" title="Send Money"><i class="fa-solid fa-arrow-up"></i></button>
@@ -467,29 +473,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>10 Apr 2026</td>
-                <td>TXN-98432</td>
-                <td>Software License (Adobe)</td>
-                <td><span class="tag tag-expense">Expense</span></td>
-                <td class="text-danger">-₹8,500</td>
-                <td><span class="status-badge success">Completed</span></td>
-              </tr>
-              <tr>
-                <td>09 Apr 2026</td>
-                <td>TXN-98431</td>
-                <td>Client Payment (ABC Corp)</td>
-                <td><span class="tag tag-income">Income</span></td>
-                <td class="text-success">+₹45,000</td>
-                <td><span class="status-badge success">Completed</span></td>
-              </tr>
-              <tr>
-                <td>08 Apr 2026</td>
-                <td>TXN-98430</td>
-                <td>Office Supplies</td>
-                <td><span class="tag tag-expense">Purchase</span></td>
-                <td class="text-danger">-₹2,100</td>
-                <td><span class="status-badge pending">Pending</span></td>
+              <tr id="txnNoResults">
+                <td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">No transactions match your search.</td>
               </tr>
             </tbody>
           </table>
@@ -513,9 +498,9 @@
             <div class="form-group">
               <label>Client / Company</label>
               <select class="form-control" id="invoiceClient">
-                <option value="">Select a Client...</option>
-                <option value="abc">ABC Corporation</option>
-                <option value="xyz">XYZ Logistics</option>
+                <option value="" disabled selected>Select a Client...</option>
+                <option value="client1">Client 1</option>
+                <option value="client2">Client 2</option>
               </select>
             </div>
             <div class="form-group">
@@ -636,11 +621,12 @@
           <div class="profile-form-area form-card">
             <div class="form-group mb-4">
               <label>Business Name</label>
-              <input type="text" id="profileName" class="form-control" value="Nikunj Technologies Pvt Ltd" />
+              <input type="text" id="profileName" class="form-control" placeholder="Enter Business Name" />
             </div>
             <div class="form-group mb-4">
               <label>Business Type</label>
               <select id="profileType" class="form-control">
+                <option value="" disabled selected>Select Business Type</option>
                 <option>Information Technology</option>
                 <option>Retail</option>
                 <option>Manufacturing</option>
@@ -649,11 +635,11 @@
             </div>
             <div class="form-group mb-4">
               <label>Tax Identification Number (GSTIN)</label>
-              <input type="text" id="profileGSTIN" class="form-control" value="24AAAAA0000A1Z5" />
+              <input type="text" id="profileGSTIN" class="form-control" placeholder="Enter GSTIN" />
             </div>
             <div class="form-group mb-4">
               <label>Registered Address</label>
-              <textarea id="profileAddress" class="form-control" rows="3">123 Tech Park, Phase 1, Startup Hub, City - 400001</textarea>
+              <textarea id="profileAddress" class="form-control" rows="3" placeholder="Enter Address"></textarea>
             </div>
             <button id="saveProfileBtn" class="btn btn-primary">Save Changes</button>
           </div>
