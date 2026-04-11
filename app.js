@@ -338,4 +338,39 @@ document.addEventListener('DOMContentLoaded', () => {
     toastTimeout = setTimeout(() => toast.classList.remove('active'), 3500);
   }
 
+  /* ============================================================
+     7. INCOME FORM CASCADING LOGIC
+     ============================================================ */
+  const incomeTypeSelect = document.getElementById('incomeTypeSelect');
+  const incomeModeContainer = document.getElementById('incomeModeContainer');
+  const saveIncomeBtn = document.getElementById('saveIncomeBtn');
+
+  if (incomeTypeSelect) {
+    incomeTypeSelect.addEventListener('change', () => {
+      if (incomeTypeSelect.value) {
+        incomeModeContainer.style.display = 'block';
+        saveIncomeBtn.style.display = 'inline-flex';
+      } else {
+        incomeModeContainer.style.display = 'none';
+        saveIncomeBtn.style.display = 'none';
+      }
+    });
+
+    if (saveIncomeBtn) {
+      saveIncomeBtn.addEventListener('click', () => {
+        const mode = document.getElementById('incomeModeSelect').value;
+        if (!mode) {
+           showToast('Please select a payment mode.', 'warning');
+           return;
+        }
+        showToast('Income recorded successfully!', 'success');
+        // Reset form
+        incomeTypeSelect.value = "";
+        document.getElementById('incomeModeSelect').value = "";
+        incomeModeContainer.style.display = 'none';
+        saveIncomeBtn.style.display = 'none';
+      });
+    }
+  }
+
 });

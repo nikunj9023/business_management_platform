@@ -380,6 +380,40 @@
       </div>
 
       <!-- ===================================== -->
+      <!-- VIEW: INCOME FORM                     -->
+      <!-- ===================================== -->
+      <div class="view-section" id="view-income">
+        <div class="section-header">
+          <h2 class="section-title">Record Income</h2>
+          <button class="btn btn-outline" onclick="window.switchView('dashboard')"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</button>
+        </div>
+
+        <div class="form-card" style="max-width: 600px;">
+          <div class="form-group mb-4">
+            <label>Type of Income</label>
+            <select id="incomeTypeSelect" class="form-control">
+              <option value="" disabled selected>Select Income Type</option>
+              <option value="sales">Sales</option>
+              <option value="other_business">Other business income</option>
+              <option value="personal">Personal income</option>
+            </select>
+          </div>
+
+          <div class="form-group mb-4" id="incomeModeContainer" style="display: none;">
+            <label>Mode of Payment</label>
+            <select id="incomeModeSelect" class="form-control">
+              <option value="" disabled selected>Select Payment Mode</option>
+              <option value="bank">Bank</option>
+              <option value="cash">Cash</option>
+              <option value="receivable">Receivable</option>
+            </select>
+          </div>
+
+          <button id="saveIncomeBtn" class="btn btn-success" style="display: none;"><i class="fa-solid fa-check"></i> Save Income</button>
+        </div>
+      </div>
+
+      <!-- ===================================== -->
       <!-- VIEW: ACCOUNTS & BANKING              -->
       <!-- ===================================== -->
       <div class="view-section" id="view-accounts">
