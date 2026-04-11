@@ -131,9 +131,10 @@ document.addEventListener('DOMContentLoaded', () => {
           breadcrumbCurrent.textContent = `${parentLabel} / ${childLabel}`;
         }
 
-        // Handle view switching for submenu links
+        // Handle view switching for submenu links — delegates to BizRouter
         const targetId = subLink.getAttribute('href').substring(1); // remove '#'
-        switchView(targetId);
+        if (window.BizRouter) BizRouter.navigate(targetId);
+        else if (window.switchView) switchView(targetId);
 
         // Close mobile menu
         if (window.innerWidth <= 768) {
@@ -145,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Handle standard link view switching
+  // Handle standard link view switching — delegates to BizRouter
   const allLinks = document.querySelectorAll('.nav-link');
   allLinks.forEach(link => {
     link.addEventListener('click', (e) => {
@@ -153,66 +154,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!parentLi.classList.contains('has-submenu')) {
         const targetHref = link.getAttribute('href');
         if (targetHref && targetHref.startsWith('#')) {
-           const targetId = targetHref.substring(1);
-           switchView(targetId);
+          e.preventDefault();
+          const targetId = targetHref.substring(1);
+          if (window.BizRouter) BizRouter.navigate(targetId);
         }
       }
     });
   });
-
-  // SPA View Switcher (Router)
-  function renderViewFromHash() {
-    let targetRoute = window.location.hash.substring(1) || 'dashboard';
-
-    const user = window.Auth.getCurrentUser();
-    const allViews = document.querySelectorAll('.view-section');
-    
-    // Auth Guard
-    if (!user && targetRoute !== 'login') {
-      window.location.hash = 'login';
-      return;
-    }
-
-    // Admin Guard
-    if (targetRoute.startsWith('admin') && (!user || user.role !== 'admin')) {
-      window.showToast('Access Denied: Admin privileges required.', 'error');
-      window.location.hash = 'dashboard';
-      return;
-    }
-
-    let viewId = `view-${targetRoute}`;
-    
-    // Special mapping rules
-    if (targetRoute === 'invoices') viewId = 'view-invoice';
-    if (targetRoute === 'business-profile') viewId = 'view-profile';
-    if (targetRoute === 'bank-accounts' || targetRoute === 'cash-flow') viewId = 'view-accounts';
-    if (targetRoute === 'all-transactions') viewId = 'view-transactions';
-    if (targetRoute === 'admin' || targetRoute.startsWith('admin-')) viewId = 'view-admin';
-    
-    const targetView = document.getElementById(viewId);
-    
-    if (targetView) {
-      allViews.forEach(view => view.classList.remove('active'));
-      targetView.classList.add('active');
-      
-      // Update breadcrumb
-      if (breadcrumbCurrent) {
-          breadcrumbCurrent.textContent = targetRoute.charAt(0).toUpperCase() + targetRoute.slice(1).replace('-', ' ');
-      }
-    }
-  }
-
-  // Hook into browser navigation (Back/Forward)
-  window.addEventListener('hashchange', renderViewFromHash);
-
-  // Export programmatic navigation helper
-  window.switchView = function(targetRoute) {
-    if (window.location.hash !== `#${targetRoute}`) {
-      window.location.hash = targetRoute;
-    } else {
-      renderViewFromHash();
-    }
-  };
 
   // ---- Auth & Login Logic ----
   if (loginForm) {
@@ -244,9 +192,6 @@ document.addEventListener('DOMContentLoaded', () => {
       window.Auth.logout();
     });
   }
-
-  // Initial Load (Execute Route)
-  renderViewFromHash();
 
   // Global toast helper
   function _fallbackToast(msg, type = 'success') {
