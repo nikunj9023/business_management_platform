@@ -296,21 +296,103 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* ============================================================
-     5. BANK ACCOUNTS INTERACTIONS (MOCK)
+     5. DYNAMIC BANK ACCOUNTS MANAGEMENT
      ============================================================ */
-  const bankActionBtns = document.querySelectorAll('.bank-actions button');
-  bankActionBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const isReceive = btn.title.includes('Receive');
-      const bankName = btn.closest('.banking-card').querySelector('.bank-logo').textContent;
-      
-      if (isReceive) {
-        showToast(`Ready to receive payments into ${bankName} account.`, 'success');
-      } else {
-        showToast(`Payment gateway initialized for ${bankName} account.`, 'info');
+  const bankingGrid = document.getElementById('bankingGrid');
+  const addAccountBtn = document.getElementById('addAccountBtn');
+  const incomeBankSelect = document.getElementById('incomeBankSelect');
+
+  let bankAccounts = [
+    { id: 1, name: 'Bank 1', balance: 0, accountNo: '**** **** 1234', isPrimary: true },
+    { id: 2, name: 'Bank 2', balance: 0, accountNo: '**** **** 5678', isPrimary: false },
+    { id: 3, name: 'Bank 3', balance: 0, accountNo: '**** **** 9012', isPrimary: false }
+  ];
+
+  function renderBankAccounts() {
+    if (!bankingGrid) return;
+    bankingGrid.innerHTML = '';
+    
+    // Also re-render the Income Dropdown for Banks
+    if (incomeBankSelect) {
+      incomeBankSelect.innerHTML = '<option value="" disabled selected>Select Bank Account</option>';
+    }
+
+    if (bankAccounts.length === 0) {
+      bankingGrid.innerHTML = '<p style="color:var(--text-muted); grid-column: 1/-1;">No accounts found. Click "Add Account" to add one.</p>';
+      return;
+    }
+
+    bankAccounts.forEach(acc => {
+      // Add to grid
+      const card = document.createElement('div');
+      card.className = `banking-card ${acc.isPrimary ? 'bank-primary' : ''}`;
+      card.innerHTML = `
+        <div class="bank-top">
+          <div class="bank-logo">${acc.name}</div>
+          ${acc.isPrimary ? '<span class="bank-status">Primary</span>' : ''}
+        </div>
+        <div class="bank-mid">
+          <p class="b-label">Available Balance</p>
+          <h2 class="b-amount">₹${acc.balance.toLocaleString('en-IN')}</h2>
+        </div>
+        <div class="bank-bottom">
+          <p class="b-acct">${acc.accountNo}</p>
+          <div class="bank-actions">
+            <button class="btn-icon-circular text-success btn-receive" data-id="${acc.id}" title="Receive Money"><i class="fa-solid fa-arrow-down"></i></button>
+            <button class="btn-icon-circular text-danger btn-send" data-id="${acc.id}" title="Send Money"><i class="fa-solid fa-arrow-up"></i></button>
+            <button class="btn-icon-circular text-danger btn-delete" data-id="${acc.id}" title="Delete Account" style="background:#fee2e2;"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>
+      `;
+      bankingGrid.appendChild(card);
+
+      // Add to Income Dropdown
+      if (incomeBankSelect) {
+        const opt = document.createElement('option');
+        opt.value = acc.id;
+        opt.textContent = `${acc.name} (${acc.accountNo})`;
+        incomeBankSelect.appendChild(opt);
       }
     });
-  });
+
+    // Attach listeners
+    document.querySelectorAll('.btn-receive').forEach(btn => {
+      btn.addEventListener('click', () => showToast(`Ready to receive payments.`, 'success'));
+    });
+    document.querySelectorAll('.btn-send').forEach(btn => {
+      btn.addEventListener('click', () => showToast(`Payment gateway initialized.`, 'info'));
+    });
+    document.querySelectorAll('.btn-delete').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = parseInt(btn.dataset.id);
+        bankAccounts = bankAccounts.filter(a => a.id !== id);
+        showToast('Account deleted successfully.', 'success');
+        renderBankAccounts();
+      });
+    });
+  }
+
+  if (addAccountBtn) {
+    addAccountBtn.addEventListener('click', () => {
+      const name = prompt("Enter Bank Name:", "New Bank");
+      if (!name) return;
+      const initialBal = prompt("Enter Initial Balance:", "0");
+      
+      const newAcc = {
+        id: Date.now(),
+        name: name,
+        balance: parseFloat(initialBal) || 0,
+        accountNo: `**** **** ${Math.floor(1000 + Math.random() * 9000)}`,
+        isPrimary: bankAccounts.length === 0
+      };
+      bankAccounts.push(newAcc);
+      showToast('Account added successfully.', 'success');
+      renderBankAccounts();
+    });
+  }
+
+  // Initial Render
+  renderBankAccounts();
 
   /* ============================================================
      6. TOAST NOTIFICATION HELPER

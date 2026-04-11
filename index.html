@@ -457,62 +457,12 @@
         <div class="section-header">
           <h2 class="section-title">Manage Accounts</h2>
           <div class="header-actions">
-            <button class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add Account</button>
+            <button class="btn btn-primary" id="addAccountBtn"><i class="fa-solid fa-plus"></i> Add Account</button>
           </div>
         </div>
         
-        <div class="banking-grid">
-          <div class="banking-card bank-primary">
-            <div class="bank-top">
-              <div class="bank-logo">Bank 1</div>
-              <span class="bank-status">Primary</span>
-            </div>
-            <div class="bank-mid">
-              <p class="b-label">Available Balance</p>
-              <h2 class="b-amount">₹0</h2>
-            </div>
-            <div class="bank-bottom">
-              <p class="b-acct">**** **** ****</p>
-              <div class="bank-actions">
-                <button class="btn-icon-circular text-success" title="Receive Money"><i class="fa-solid fa-arrow-down"></i></button>
-                <button class="btn-icon-circular text-danger" title="Send Money"><i class="fa-solid fa-arrow-up"></i></button>
-              </div>
-            </div>
-          </div>
-
-          <div class="banking-card">
-            <div class="bank-top">
-              <div class="bank-logo">Bank 2</div>
-            </div>
-            <div class="bank-mid">
-              <p class="b-label">Available Balance</p>
-              <h2 class="b-amount">₹0</h2>
-            </div>
-            <div class="bank-bottom">
-              <p class="b-acct">**** **** ****</p>
-              <div class="bank-actions">
-                <button class="btn-icon-circular text-success" title="Receive Money"><i class="fa-solid fa-arrow-down"></i></button>
-                <button class="btn-icon-circular text-danger" title="Send Money"><i class="fa-solid fa-arrow-up"></i></button>
-              </div>
-            </div>
-          </div>
-
-          <div class="banking-card">
-            <div class="bank-top">
-              <div class="bank-logo">Bank 3</div>
-            </div>
-            <div class="bank-mid">
-              <p class="b-label">Available Balance</p>
-              <h2 class="b-amount">₹0</h2>
-            </div>
-            <div class="bank-bottom">
-              <p class="b-acct">**** **** ****</p>
-              <div class="bank-actions">
-                <button class="btn-icon-circular text-success" title="Receive Money"><i class="fa-solid fa-arrow-down"></i></button>
-                <button class="btn-icon-circular text-danger" title="Send Money"><i class="fa-solid fa-arrow-up"></i></button>
-              </div>
-            </div>
-          </div>
+        <div class="banking-grid" id="bankingGrid">
+          <!-- Dynamic accounts will be injected here via app.js -->
         </div>
       </div>
 
