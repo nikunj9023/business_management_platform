@@ -64,7 +64,7 @@ const Auth = {
       }
       
       // Update UI names
-      document.querySelectorAll('.user-name, .t-user-name').forEach(el => {
+      document.querySelectorAll('.user-name, .t-user-name, .user-display-name').forEach(el => {
         el.textContent = user.name;
       });
       document.querySelectorAll('.user-role, .t-user-role').forEach(el => {
