@@ -18,6 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const currentDateEl = document.getElementById('currentDate');
   const breadcrumbCurrent = document.getElementById('breadcrumbCurrent');
 
+  // Auth Elements
+  const loginForm = document.getElementById('loginForm');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const loginEmail = document.getElementById('loginEmail');
+  const loginPass = document.getElementById('loginPassword');
+  const loginSubmitBtn = document.getElementById('loginSubmitBtn');
+
   // ---- Current Date Functionality ----
   if (currentDateEl) {
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -155,25 +162,91 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // SPA View Switcher
   function switchView(targetRoute) {
+    const user = window.Auth.getCurrentUser();
     const allViews = document.querySelectorAll('.view-section');
     
-    // Default mapping rules (if route matches id exactly, or add prefix)
+    // Auth Guard
+    if (!user && targetRoute !== 'login') {
+      targetRoute = 'login';
+    }
+
+    // Admin Guard
+    if (targetRoute.startsWith('admin') && (!user || user.role !== 'admin')) {
+      showToast('Access Denied: Admin privileges required.', 'error');
+      return;
+    }
+
     let viewId = `view-${targetRoute}`;
     
-    // Special handling if route doesn't literally match the id
+    // Special mapping rules
     if (targetRoute === 'invoices') viewId = 'view-invoice';
     if (targetRoute === 'business-profile') viewId = 'view-profile';
     if (targetRoute === 'bank-accounts' || targetRoute === 'cash-flow') viewId = 'view-accounts';
     if (targetRoute === 'all-transactions') viewId = 'view-transactions';
+    if (targetRoute === 'admin' || targetRoute.startsWith('admin-')) viewId = 'view-admin';
     
     const targetView = document.getElementById(viewId);
     
     if (targetView) {
-      // Hide all views
       allViews.forEach(view => view.classList.remove('active'));
-      // Show targeted view
       targetView.classList.add('active');
+      
+      // Update breadcrumb
+      if (breadcrumbCurrent) {
+          breadcrumbCurrent.textContent = targetRoute.charAt(0).toUpperCase() + targetRoute.slice(1).replace('-', ' ');
+      }
     }
   }
+  // Export to window
+  window.switchView = switchView;
+
+  // ---- Auth & Login Logic ----
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const email = loginEmail.value.trim();
+      const password = loginPass.value.trim();
+
+      loginSubmitBtn.classList.add('loading');
+      loginSubmitBtn.disabled = true;
+
+      try {
+        const user = await window.Auth.login(email, password);
+        showToast(`Welcome back, ${user.name}!`, 'success');
+        
+        setTimeout(() => {
+          window.location.reload(); 
+        }, 800);
+
+      } catch (err) {
+        showToast(err, 'error');
+        loginSubmitBtn.classList.remove('loading');
+        loginSubmitBtn.disabled = false;
+      }
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      window.Auth.logout();
+    });
+  }
+
+  // Initial Guard
+  if (!window.Auth.isAuthenticated()) {
+    switchView('login');
+  }
+
+  // Global toast helper
+  function showToast(msg, type = 'success') {
+    if (window.showToast) {
+        window.showToast(msg, type);
+    } else {
+        console.log(`Toast [${type}]: ${msg}`);
+        // Fallback if app.js toast logic isn't ready
+    }
+  }
+  window.showToast = showToast;
 
 });
