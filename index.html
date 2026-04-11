@@ -409,6 +409,43 @@
             </select>
           </div>
 
+          <!-- Bank Select Options -->
+          <div class="form-group mb-4" id="incomeBankContainer" style="display: none;">
+            <label>Select Bank Details</label>
+            <select id="incomeBankSelect" class="form-control">
+              <option value="" disabled selected>Select Bank Account</option>
+              <option value="bank1">Bank 1</option>
+              <option value="bank2">Bank 2</option>
+              <option value="bank3">Bank 3</option>
+            </select>
+          </div>
+
+          <!-- Cash Select Options -->
+          <div class="form-group mb-4" id="incomeCashContainer" style="display: none;">
+            <label>Select Cash Account</label>
+            <select id="incomeCashSelect" class="form-control">
+              <option value="" disabled selected>Select Cash Box</option>
+              <option value="main">Main Safe/Register</option>
+              <option value="petty">Petty Cash</option>
+            </select>
+          </div>
+
+          <!-- Receivable Select Options -->
+          <div class="form-group mb-4" id="incomeReceivableContainer" style="display: none;">
+            <label>Select Receiver (Client/Contact)</label>
+            <select id="incomeReceivableSelect" class="form-control">
+              <option value="" disabled selected>Select Receiver</option>
+              <option value="new" class="text-primary">+ Add New Receiver</option>
+              <optgroup label="Recent Receivers">
+                <option value="rec1">ABC Corporation</option>
+                <option value="rec2">XYZ Logistics</option>
+                <option value="rec3">John Doe</option>
+                <option value="rec4">Global Tech</option>
+                <option value="rec5">Acme Corp</option>
+              </optgroup>
+            </select>
+          </div>
+
           <button id="saveIncomeBtn" class="btn btn-success" style="display: none;"><i class="fa-solid fa-check"></i> Save Income</button>
         </div>
       </div>

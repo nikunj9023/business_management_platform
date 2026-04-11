@@ -343,7 +343,18 @@ document.addEventListener('DOMContentLoaded', () => {
      ============================================================ */
   const incomeTypeSelect = document.getElementById('incomeTypeSelect');
   const incomeModeContainer = document.getElementById('incomeModeContainer');
+  const incomeModeSelect = document.getElementById('incomeModeSelect');
   const saveIncomeBtn = document.getElementById('saveIncomeBtn');
+  
+  const incomeBankContainer = document.getElementById('incomeBankContainer');
+  const incomeCashContainer = document.getElementById('incomeCashContainer');
+  const incomeReceivableContainer = document.getElementById('incomeReceivableContainer');
+
+  function hideAllModeContainers() {
+    if(incomeBankContainer) incomeBankContainer.style.display = 'none';
+    if(incomeCashContainer) incomeCashContainer.style.display = 'none';
+    if(incomeReceivableContainer) incomeReceivableContainer.style.display = 'none';
+  }
 
   if (incomeTypeSelect) {
     incomeTypeSelect.addEventListener('change', () => {
@@ -353,12 +364,27 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         incomeModeContainer.style.display = 'none';
         saveIncomeBtn.style.display = 'none';
+        if(incomeModeSelect) incomeModeSelect.value = "";
+        hideAllModeContainers();
       }
     });
 
+    if (incomeModeSelect) {
+      incomeModeSelect.addEventListener('change', () => {
+        hideAllModeContainers();
+        if (incomeModeSelect.value === 'bank' && incomeBankContainer) {
+          incomeBankContainer.style.display = 'block';
+        } else if (incomeModeSelect.value === 'cash' && incomeCashContainer) {
+          incomeCashContainer.style.display = 'block';
+        } else if (incomeModeSelect.value === 'receivable' && incomeReceivableContainer) {
+          incomeReceivableContainer.style.display = 'block';
+        }
+      });
+    }
+
     if (saveIncomeBtn) {
       saveIncomeBtn.addEventListener('click', () => {
-        const mode = document.getElementById('incomeModeSelect').value;
+        const mode = incomeModeSelect ? incomeModeSelect.value : null;
         if (!mode) {
            showToast('Please select a payment mode.', 'warning');
            return;
@@ -366,9 +392,10 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('Income recorded successfully!', 'success');
         // Reset form
         incomeTypeSelect.value = "";
-        document.getElementById('incomeModeSelect').value = "";
+        if(incomeModeSelect) incomeModeSelect.value = "";
         incomeModeContainer.style.display = 'none';
         saveIncomeBtn.style.display = 'none';
+        hideAllModeContainers();
       });
     }
   }
