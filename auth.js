@@ -16,18 +16,15 @@ const Auth = {
 
   login(email, password) {
     return new Promise((resolve, reject) => {
-      // Simulate network delay
-      setTimeout(() => {
-        const user = this.mockUsers.find(u => u.email === email && u.password === password);
-        if (user) {
-          const sessionUser = { ...user };
-          delete sessionUser.password;
-          localStorage.setItem('bizcore_session', JSON.stringify(sessionUser));
-          resolve(sessionUser);
-        } else {
-          reject('Invalid email or password.');
-        }
-      }, 100);
+      const user = this.mockUsers.find(u => u.email === email && u.password === password);
+      if (user) {
+        const sessionUser = { ...user };
+        delete sessionUser.password;
+        localStorage.setItem('bizcore_session', JSON.stringify(sessionUser));
+        resolve(sessionUser);
+      } else {
+        reject('Invalid email or password.');
+      }
     });
   },
 

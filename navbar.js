@@ -215,9 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const user = await window.Auth.login(email, password);
         showToast(`Welcome back, ${user.name}!`, 'success');
         
-        setTimeout(() => {
-          window.location.reload(); 
-        }, 100);
+        window.location.reload(); 
 
       } catch (err) {
         showToast(err, 'error');
