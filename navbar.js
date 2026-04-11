@@ -172,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Admin Guard
     if (targetRoute.startsWith('admin') && (!user || user.role !== 'admin')) {
-      showToast('Access Denied: Admin privileges required.', 'error');
+      window.showToast('Access Denied: Admin privileges required.', 'error');
       return;
     }
 
@@ -213,12 +213,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       try {
         const user = await window.Auth.login(email, password);
-        showToast(`Welcome back, ${user.name}!`, 'success');
+        window.showToast(`Welcome back, ${user.name}!`, 'success');
         
         window.location.reload(); 
 
       } catch (err) {
-        showToast(err, 'error');
+        window.showToast(err, 'error');
         loginSubmitBtn.classList.remove('loading');
         loginSubmitBtn.disabled = false;
       }
@@ -237,14 +237,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Global toast helper
-  function showToast(msg, type = 'success') {
-    if (window.showToast) {
+  function _fallbackToast(msg, type = 'success') {
+    if (window.showToast && window.showToast !== _fallbackToast) {
         window.showToast(msg, type);
     } else {
         console.log(`Toast [${type}]: ${msg}`);
-        // Fallback if app.js toast logic isn't ready
     }
   }
-  window.showToast = showToast;
+  if (!window.showToast) {
+    window.showToast = _fallbackToast;
+  }
 
 });
