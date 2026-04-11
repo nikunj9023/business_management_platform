@@ -160,19 +160,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // SPA View Switcher
-  function switchView(targetRoute) {
+  // SPA View Switcher (Router)
+  function renderViewFromHash() {
+    let targetRoute = window.location.hash.substring(1) || 'dashboard';
+
     const user = window.Auth.getCurrentUser();
     const allViews = document.querySelectorAll('.view-section');
     
     // Auth Guard
     if (!user && targetRoute !== 'login') {
-      targetRoute = 'login';
+      window.location.hash = 'login';
+      return;
     }
 
     // Admin Guard
     if (targetRoute.startsWith('admin') && (!user || user.role !== 'admin')) {
       window.showToast('Access Denied: Admin privileges required.', 'error');
+      window.location.hash = 'dashboard';
       return;
     }
 
@@ -197,8 +201,18 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   }
-  // Export to window
-  window.switchView = switchView;
+
+  // Hook into browser navigation (Back/Forward)
+  window.addEventListener('hashchange', renderViewFromHash);
+
+  // Export programmatic navigation helper
+  window.switchView = function(targetRoute) {
+    if (window.location.hash !== `#${targetRoute}`) {
+      window.location.hash = targetRoute;
+    } else {
+      renderViewFromHash();
+    }
+  };
 
   // ---- Auth & Login Logic ----
   if (loginForm) {
@@ -231,10 +245,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Initial Guard
-  if (!window.Auth.isAuthenticated()) {
-    switchView('login');
-  }
+  // Initial Load (Execute Route)
+  renderViewFromHash();
 
   // Global toast helper
   function _fallbackToast(msg, type = 'success') {
