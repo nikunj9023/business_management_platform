@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: bizcore-platform
+    env: static
+    buildCommand: ""
+    staticPublishPath: ./
