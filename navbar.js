@@ -25,6 +25,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const loginPass = document.getElementById('loginPassword');
   const loginSubmitBtn = document.getElementById('loginSubmitBtn');
 
+  // Register Elements
+  const registerForm = document.getElementById('registerForm');
+  const registerName = document.getElementById('registerName');
+  const registerEmail = document.getElementById('registerEmail');
+  const registerPassword = document.getElementById('registerPassword');
+  const registerConfirmPassword = document.getElementById('registerConfirmPassword');
+  const registerSubmitBtn = document.getElementById('registerSubmitBtn');
+  
+  // Auth Toggles & Text
+  const showRegisterBtn = document.getElementById('showRegisterBtn');
+  const showLoginBtn = document.getElementById('showLoginBtn');
+  const authTitle = document.getElementById('authTitle');
+  const authSubtitle = document.getElementById('authSubtitle');
+  const loginFooterToggle = document.getElementById('loginFooterToggle');
+  const registerFooterToggle = document.getElementById('registerFooterToggle');
+
   // ---- Current Date Functionality ----
   if (currentDateEl) {
     const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -163,6 +179,33 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ---- Auth & Login Logic ----
+  
+  // Toggle to Register View
+  if (showRegisterBtn) {
+    showRegisterBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (loginForm) loginForm.style.display = 'none';
+      if (loginFooterToggle) loginFooterToggle.style.display = 'none';
+      if (registerForm) registerForm.style.display = 'block';
+      if (registerFooterToggle) registerFooterToggle.style.display = 'block';
+      if (authTitle) authTitle.textContent = 'Create an Account';
+      if (authSubtitle) authSubtitle.textContent = 'Sign up to get started with BizCore';
+    });
+  }
+
+  // Toggle to Login View
+  if (showLoginBtn) {
+    showLoginBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (registerForm) registerForm.style.display = 'none';
+      if (registerFooterToggle) registerFooterToggle.style.display = 'none';
+      if (loginForm) loginForm.style.display = 'block';
+      if (loginFooterToggle) loginFooterToggle.style.display = 'block';
+      if (authTitle) authTitle.textContent = 'Welcome to BizCore';
+      if (authSubtitle) authSubtitle.textContent = 'Please sign in to your business suite';
+    });
+  }
+
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -183,6 +226,35 @@ document.addEventListener('DOMContentLoaded', () => {
         window.showToast(err, 'error');
         loginSubmitBtn.classList.remove('loading');
         loginSubmitBtn.disabled = false;
+      }
+    });
+  }
+
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const name = registerName.value.trim();
+      const email = registerEmail.value.trim();
+      const password = registerPassword.value.trim();
+      const confirmPassword = registerConfirmPassword.value.trim();
+
+      if (password !== confirmPassword) {
+        window.showToast('Passwords do not match.', 'error');
+        return;
+      }
+
+      registerSubmitBtn.classList.add('loading');
+      registerSubmitBtn.disabled = true;
+
+      try {
+        const user = await window.Auth.register(name, email, password);
+        window.showToast(`Account created successfully! Welcome, ${user.name}!`, 'success');
+        window.location.reload();
+      } catch (err) {
+        window.showToast(err, 'error');
+        registerSubmitBtn.classList.remove('loading');
+        registerSubmitBtn.disabled = false;
       }
     });
   }

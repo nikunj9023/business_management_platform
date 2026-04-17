@@ -5,13 +5,41 @@
 
 const Auth = {
   // Mock users for simulation
-  mockUsers: [
-    { email: 'admin@bizcore.com', password: 'password123', name: 'Nikunj Patel', role: 'admin' },
-    { email: 'user@bizcore.com', password: 'password123', name: 'John Doe', role: 'user' }
-  ],
+  mockUsers: [],
 
   init() {
+    // Load users from localStorage or set defaults
+    const storedUsers = localStorage.getItem('bizcore_users');
+    if (storedUsers) {
+      this.mockUsers = JSON.parse(storedUsers);
+    } else {
+      this.mockUsers = [
+        { email: 'admin@bizcore.com', password: 'password123', name: 'Nikunj Patel', role: 'admin' },
+        { email: 'user@bizcore.com', password: 'password123', name: 'John Doe', role: 'user' }
+      ];
+      localStorage.setItem('bizcore_users', JSON.stringify(this.mockUsers));
+    }
+    
     this.checkSession();
+  },
+
+  register(name, email, password) {
+    return new Promise((resolve, reject) => {
+      const existingUser = this.mockUsers.find(u => u.email === email);
+      if (existingUser) {
+        reject('An account with this email already exists.');
+        return;
+      }
+      
+      const newUser = { email, password, name, role: 'user' };
+      this.mockUsers.push(newUser);
+      localStorage.setItem('bizcore_users', JSON.stringify(this.mockUsers));
+      
+      const sessionUser = { ...newUser };
+      delete sessionUser.password;
+      localStorage.setItem('bizcore_session', JSON.stringify(sessionUser));
+      resolve(sessionUser);
+    });
   },
 
   login(email, password) {
