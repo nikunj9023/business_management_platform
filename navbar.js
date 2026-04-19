@@ -133,7 +133,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const submenuLinks = item.querySelectorAll('.submenu a');
     submenuLinks.forEach(subLink => {
       subLink.addEventListener('click', (e) => {
-        // e.preventDefault(); // uncomment if no real navigation needed in demo
         
         // Remove active from all main items
         navItems.forEach(i => i.classList.remove('active'));
@@ -267,6 +266,17 @@ document.addEventListener('DOMContentLoaded', () => {
         window.showToast(err, 'error');
         registerSubmitBtn.classList.remove('loading');
         registerSubmitBtn.disabled = false;
+      }
+    });
+  }
+
+  const googleLoginBtn = document.getElementById('googleLoginBtn');
+  if (googleLoginBtn) {
+    googleLoginBtn.addEventListener('click', async () => {
+      try {
+        await window.Auth.loginWithGoogle();
+      } catch (err) {
+        window.showToast(err, 'error');
       }
     });
   }

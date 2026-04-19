@@ -10,7 +10,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
   <link rel="stylesheet" href="navbar.css"/>
+  <!-- Supabase SDK & App Logic -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="auth.js"></script>
+  <script src="db.js"></script>
 </head>
 <body>
 
@@ -317,6 +320,15 @@
               </button>
             </form>
 
+            <div class="auth-divider">
+              <span>or</span>
+            </div>
+            
+            <button type="button" class="btn btn-google" id="googleLoginBtn">
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo">
+              Continue with Google
+            </button>
+
             <div class="login-footer" id="loginFooterToggle">
               <p>Don't have an account? <a href="#" id="showRegisterBtn">Sign Up</a></p>
             </div>
@@ -325,10 +337,6 @@
               <p>Already have an account? <a href="#" id="showLoginBtn">Sign In</a></p>
             </div>
             
-            <div class="login-hint">
-              <p><strong>Demo Credentials:</strong></p>
-              <p>Admin: admin@bizcore.com / password123</p>
-              <p>User: user@bizcore.com / password123</p>
             </div>
           </div>
         </div>

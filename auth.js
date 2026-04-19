@@ -1,124 +1,129 @@
 /**
- * BizCore - Authentication & Role-Based Access Control
- * Handles simulated login, session persistence, and role validation.
+ * BizCore - Supabase Authentication & Session Management
  */
 
+const SUPABASE_CONFIG = {
+  // TODO: Replace these with your actual Supabase credentials
+  url: 'YOUR_SUPABASE_URL',
+  key: 'YOUR_SUPABASE_ANON_KEY'
+};
+
+// Initialize Supabase Client
+const _supabase = (SUPABASE_CONFIG.url !== 'YOUR_SUPABASE_URL') 
+  ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key)
+  : { auth: { 
+      onAuthStateChange: (cb) => { console.warn('Supabase not configured. Auth is disabled.'); return { data: { subscription: { unsubscribe: () => {} } } }; },
+      getSession: async () => ({ data: { session: null } }),
+      signInWithPassword: async () => ({ error: { message: 'Supabase URL/Key missing. Please configure in auth.js.' } }),
+      signUp: async () => ({ error: { message: 'Supabase URL/Key missing. Please configure in auth.js.' } }),
+      signOut: async () => {}
+    } 
+  };
+
 const Auth = {
-  // Mock users for simulation
-  mockUsers: [],
-
-  init() {
-    // Load users from localStorage or set defaults
-    const storedUsers = localStorage.getItem('bizcore_users');
-    if (storedUsers) {
-      this.mockUsers = JSON.parse(storedUsers);
-    } else {
-      this.mockUsers = [
-        { email: 'admin@bizcore.com', password: 'password123', name: 'Admin', role: 'admin' },
-        { email: 'user@bizcore.com', password: 'password123', name: 'John Doe', role: 'user' }
-      ];
-      localStorage.setItem('bizcore_users', JSON.stringify(this.mockUsers));
-    }
+  async init() {
+    // Listen for auth changes
+    _supabase.auth.onAuthStateChange((event, session) => {
+      this.checkSession(session);
+      // Trigger a custom event for app.js to reload data
+      window.dispatchEvent(new CustomEvent('bizAuthStateChanged', { detail: { event, session } }));
+    });
     
-    this.checkSession();
+    const { data: { session } } = await _supabase.auth.getSession();
+    this.checkSession(session);
   },
 
-  register(name, email, password) {
-    return new Promise((resolve, reject) => {
-      const existingUser = this.mockUsers.find(u => u.email === email);
-      if (existingUser) {
-        reject('An account with this email already exists.');
-        return;
-      }
-      
-      const newUser = { email, password, name, role: 'user' };
-      this.mockUsers.push(newUser);
-      localStorage.setItem('bizcore_users', JSON.stringify(this.mockUsers));
-      
-      const sessionUser = { ...newUser };
-      delete sessionUser.password;
-      localStorage.setItem('bizcore_session', JSON.stringify(sessionUser));
-      resolve(sessionUser);
-    });
-  },
-
-  login(email, password) {
-    return new Promise((resolve, reject) => {
-      const user = this.mockUsers.find(u => u.email === email && u.password === password);
-      if (user) {
-        const sessionUser = { ...user };
-        delete sessionUser.password;
-        localStorage.setItem('bizcore_session', JSON.stringify(sessionUser));
-        resolve(sessionUser);
-      } else {
-        reject('Invalid email or password.');
+  async register(name, email, password) {
+    const { data, error } = await _supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name }
       }
     });
+
+    if (error) throw error.message;
+    return data.user;
   },
 
-  logout() {
-    localStorage.removeItem('bizcore_session');
+  async login(email, password) {
+    const { data, error } = await _supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) throw error.message;
+    return data.user;
+  },
+
+  async loginWithGoogle() {
+    const { data, error } = await _supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+
+    if (error) throw error.message;
+    return data;
+  },
+
+  async logout() {
+    await _supabase.auth.signOut();
     window.location.reload();
   },
 
-  getCurrentUser() {
-    const session = localStorage.getItem('bizcore_session');
-    return session ? JSON.parse(session) : null;
+  async getCurrentUser() {
+    const { data: { session } } = await _supabase.auth.getSession();
+    return session ? session.user : null;
   },
 
-  isAuthenticated() {
-    return this.getCurrentUser() !== null;
+  async isAuthenticated() {
+    const user = await this.getCurrentUser();
+    return user !== null;
   },
 
-  isAdmin() {
-    const user = this.getCurrentUser();
-    return user && user.role === 'admin';
+  async isAdmin() {
+    // In Supabase, role can be stored in auth.users metadata or a profiles table
+    // For now, we allow the mock 'admin' check if needed, but ideally we check metadata
+    const user = await this.getCurrentUser();
+    return user && (user.app_metadata?.role === 'admin' || user.user_metadata?.role === 'admin');
   },
 
-  checkSession() {
-    const user = this.getCurrentUser();
+  checkSession(session) {
+    const user = session ? session.user : null;
     const appBody = document.body;
 
     if (user) {
       appBody.classList.add('is-authenticated');
       appBody.classList.remove('is-guest');
-      if (user.role === 'admin') {
-        appBody.classList.add('is-admin');
-      } else {
-        appBody.classList.remove('is-admin');
-      }
       
-      // Force overwrite older Nikunj Patel local storage if present
-      if (user.name === 'Nikunj Patel') {
-        user.name = 'Admin';
-        localStorage.setItem('bizcore_session', JSON.stringify(user));
-        let allUsers = JSON.parse(localStorage.getItem('bizcore_users') || '[]');
-        let dbAdmin = allUsers.find(u => u.email === user.email);
-        if (dbAdmin) {
-          dbAdmin.name = 'Admin';
-          localStorage.setItem('bizcore_users', JSON.stringify(allUsers));
-        }
-      }
+      const displayName = user.user_metadata?.full_name || user.email.split('@')[0];
+      const role = user.app_metadata?.role || 'user';
+
+      if (role === 'admin') appBody.classList.add('is-admin');
+      else appBody.classList.remove('is-admin');
       
       // Update UI names
       document.querySelectorAll('.user-name, .t-user-name, .user-display-name').forEach(el => {
-        el.textContent = user.name;
+        el.textContent = displayName;
       });
       document.querySelectorAll('.user-role, .t-user-role').forEach(el => {
-        el.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+        el.textContent = role.charAt(0).toUpperCase() + role.slice(1);
       });
       document.querySelectorAll('.user-avatar').forEach(el => {
-        el.textContent = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
+        el.textContent = displayName.split(' ').map(n => n[0]).join('').toUpperCase();
       });
 
     } else {
       appBody.classList.add('is-guest');
       appBody.classList.remove('is-authenticated', 'is-admin');
-      // If we are not on the login page/view, we might want to force it
-      // For SPA, navbar.js will handle showing the login view
     }
   }
 };
+
+// Internal Supabase reference for app.js
+window._supabase = _supabase;
 
 // Auto-init on load
 document.addEventListener('DOMContentLoaded', () => Auth.init());
