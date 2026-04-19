@@ -1,5 +1,5 @@
 /**
- * BizCore - Supabase Authentication & Session Management
+ * BizCore - Hybrid Authentication (Supabase + Local Fallback)
  */
 
 const SUPABASE_CONFIG = {
@@ -8,113 +8,121 @@ const SUPABASE_CONFIG = {
   key: 'YOUR_SUPABASE_ANON_KEY'
 };
 
+const IS_CLOUD = (SUPABASE_CONFIG.url !== 'YOUR_SUPABASE_URL' && SUPABASE_CONFIG.url !== '');
+
 // Initialize Supabase Client
-const _supabase = (SUPABASE_CONFIG.url !== 'YOUR_SUPABASE_URL') 
+const _supabase = IS_CLOUD 
   ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key)
-  : { auth: { 
-      onAuthStateChange: (cb) => { console.warn('Supabase not configured. Auth is disabled.'); return { data: { subscription: { unsubscribe: () => {} } } }; },
-      getSession: async () => ({ data: { session: null } }),
-      signInWithPassword: async () => ({ error: { message: 'Supabase URL/Key missing. Please configure in auth.js.' } }),
-      signUp: async () => ({ error: { message: 'Supabase URL/Key missing. Please configure in auth.js.' } }),
-      signOut: async () => {}
-    } 
-  };
+  : null;
 
 const Auth = {
+  mockUsers: [
+    { email: 'admin@bizcore.com', password: 'password123', name: 'Admin', role: 'admin' },
+    { email: 'user@bizcore.com', password: 'password123', name: 'User', role: 'user' }
+  ],
+
   async init() {
-    // Listen for auth changes
-    _supabase.auth.onAuthStateChange((event, session) => {
+    if (IS_CLOUD) {
+      _supabase.auth.onAuthStateChange((event, session) => {
+        this.checkSession(session);
+        window.dispatchEvent(new CustomEvent('bizAuthStateChanged', { detail: { event, session } }));
+      });
+      const { data: { session } } = await _supabase.auth.getSession();
       this.checkSession(session);
-      // Trigger a custom event for app.js to reload data
-      window.dispatchEvent(new CustomEvent('bizAuthStateChanged', { detail: { event, session } }));
-    });
-    
-    const { data: { session } } = await _supabase.auth.getSession();
-    this.checkSession(session);
+    } else {
+      console.warn('BizCore: Operating in Local/Demo mode. Cloud sync is disabled.');
+      this.checkSession(); 
+    }
   },
 
   async register(name, email, password) {
-    const { data, error } = await _supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: name }
-      }
-    });
-
-    if (error) throw error.message;
-    return data.user;
+    if (IS_CLOUD) {
+      const { data, error } = await _supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
+      if (error) throw error.message;
+      return data.user;
+    } else {
+      // Local Registration
+      const newUser = { email, password, name, role: 'user' };
+      this.mockUsers.push(newUser);
+      localStorage.setItem('bizcore_session', JSON.stringify(newUser));
+      window.location.reload();
+      return newUser;
+    }
   },
 
   async login(email, password) {
-    const { data, error } = await _supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) throw error.message;
-    return data.user;
+    if (IS_CLOUD) {
+      const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error.message;
+      return data.user;
+    } else {
+      // Local Login Fallback
+      const user = this.mockUsers.find(u => u.email === email && u.password === password);
+      if (user) {
+        localStorage.setItem('bizcore_session', JSON.stringify(user));
+        window.location.reload();
+        return user;
+      }
+      throw 'Invalid email or password. (Demo Mode: use admin@bizcore.com / password123)';
+    }
   },
 
   async loginWithGoogle() {
-    const { data, error } = await _supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin
-      }
-    });
-
-    if (error) throw error.message;
-    return data;
+    if (IS_CLOUD) {
+      const { data, error } = await _supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+      });
+      if (error) throw error.message;
+      return data;
+    } else {
+      throw 'Google Login requires Supabase configuration. Please add your keys to auth.js.';
+    }
   },
 
   async logout() {
-    await _supabase.auth.signOut();
+    if (IS_CLOUD) {
+      await _supabase.auth.signOut();
+    } else {
+      localStorage.removeItem('bizcore_session');
+    }
     window.location.reload();
   },
 
   async getCurrentUser() {
-    const { data: { session } } = await _supabase.auth.getSession();
-    return session ? session.user : null;
+    if (IS_CLOUD) {
+      const { data: { session } } = await _supabase.auth.getSession();
+      return session ? session.user : null;
+    } else {
+      const session = localStorage.getItem('bizcore_session');
+      return session ? JSON.parse(session) : null;
+    }
   },
 
-  async isAuthenticated() {
-    const user = await this.getCurrentUser();
-    return user !== null;
-  },
+  checkSession(cloudSession = null) {
+    let user = null;
+    if (IS_CLOUD && cloudSession) {
+      user = cloudSession.user;
+    } else if (!IS_CLOUD) {
+      const session = localStorage.getItem('bizcore_session');
+      user = session ? JSON.parse(session) : null;
+    }
 
-  async isAdmin() {
-    // In Supabase, role can be stored in auth.users metadata or a profiles table
-    // For now, we allow the mock 'admin' check if needed, but ideally we check metadata
-    const user = await this.getCurrentUser();
-    return user && (user.app_metadata?.role === 'admin' || user.user_metadata?.role === 'admin');
-  },
-
-  checkSession(session) {
-    const user = session ? session.user : null;
     const appBody = document.body;
-
     if (user) {
       appBody.classList.add('is-authenticated');
       appBody.classList.remove('is-guest');
       
-      const displayName = user.user_metadata?.full_name || user.email.split('@')[0];
-      const role = user.app_metadata?.role || 'user';
+      const isCloudUser = !!user.id;
+      const displayName = isCloudUser ? (user.user_metadata?.full_name || user.email.split('@')[0]) : user.name;
+      const role = isCloudUser ? (user.app_metadata?.role || 'user') : user.role;
 
       if (role === 'admin') appBody.classList.add('is-admin');
       else appBody.classList.remove('is-admin');
       
-      // Update UI names
-      document.querySelectorAll('.user-name, .t-user-name, .user-display-name').forEach(el => {
-        el.textContent = displayName;
-      });
-      document.querySelectorAll('.user-role, .t-user-role').forEach(el => {
-        el.textContent = role.charAt(0).toUpperCase() + role.slice(1);
-      });
-      document.querySelectorAll('.user-avatar').forEach(el => {
-        el.textContent = displayName.split(' ').map(n => n[0]).join('').toUpperCase();
-      });
-
+      document.querySelectorAll('.user-name, .t-user-name, .user-display-name').forEach(el => el.textContent = displayName);
+      document.querySelectorAll('.user-role, .t-user-role').forEach(el => el.textContent = role.charAt(0).toUpperCase() + role.slice(1));
+      document.querySelectorAll('.user-avatar').forEach(el => el.textContent = displayName.split(' ').map(n => n[0]).join('').toUpperCase());
     } else {
       appBody.classList.add('is-guest');
       appBody.classList.remove('is-authenticated', 'is-admin');
@@ -122,9 +130,6 @@ const Auth = {
   }
 };
 
-// Internal Supabase reference for app.js
 window._supabase = _supabase;
-
-// Auto-init on load
 document.addEventListener('DOMContentLoaded', () => Auth.init());
 window.Auth = Auth;
