@@ -178,6 +178,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // ---- Home Buttons Logic ----
+  const homeButtons = document.querySelectorAll('.breadcrumb-root, .brand-logo, .mobile-brand');
+  homeButtons.forEach(btn => {
+    btn.style.cursor = 'pointer';
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (window.BizRouter) {
+        window.BizRouter.navigate('dashboard');
+      }
+    });
+  });
+
   // ---- Auth & Login Logic ----
   
   // Toggle to Register View

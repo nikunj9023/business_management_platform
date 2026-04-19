@@ -45,9 +45,14 @@
       breadcrumb: 'Transactions / Expenses'
     },
     'invoices': {
-      viewId:    'view-invoice',
-      title:     'Invoices',
+      viewId:    'view-invoices-list',
+      title:     'Invoices List',
       breadcrumb: 'Transactions / Invoices'
+    },
+    'create-invoice': {
+      viewId:    'view-invoice',
+      title:     'Create Invoice',
+      breadcrumb: 'Transactions / Invoices / Create'
     },
     'all-transactions': {
       viewId:    'view-transactions',

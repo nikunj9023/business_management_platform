@@ -14,7 +14,7 @@ const Auth = {
       this.mockUsers = JSON.parse(storedUsers);
     } else {
       this.mockUsers = [
-        { email: 'admin@bizcore.com', password: 'password123', name: 'Nikunj Patel', role: 'admin' },
+        { email: 'admin@bizcore.com', password: 'password123', name: 'Admin', role: 'admin' },
         { email: 'user@bizcore.com', password: 'password123', name: 'John Doe', role: 'user' }
       ];
       localStorage.setItem('bizcore_users', JSON.stringify(this.mockUsers));
@@ -86,6 +86,18 @@ const Auth = {
         appBody.classList.add('is-admin');
       } else {
         appBody.classList.remove('is-admin');
+      }
+      
+      // Force overwrite older Nikunj Patel local storage if present
+      if (user.name === 'Nikunj Patel') {
+        user.name = 'Admin';
+        localStorage.setItem('bizcore_session', JSON.stringify(user));
+        let allUsers = JSON.parse(localStorage.getItem('bizcore_users') || '[]');
+        let dbAdmin = allUsers.find(u => u.email === user.email);
+        if (dbAdmin) {
+          dbAdmin.name = 'Admin';
+          localStorage.setItem('bizcore_users', JSON.stringify(allUsers));
+        }
       }
       
       // Update UI names

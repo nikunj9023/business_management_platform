@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const totalEl          = document.getElementById('invoiceTotal');
   const clientSelect     = document.getElementById('invoiceClient');
   const invoiceDate      = document.getElementById('invoiceDate');
+  const invoiceItemGst   = document.getElementById('invoiceItemGst');
   const generateBtn      = document.getElementById('generateInvoiceBtn');
   const saveDraftBtn     = document.getElementById('saveDraftBtn');
 
@@ -46,9 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function recalculateTotals() {
-    const subtotal = invoiceItems.reduce((sum, item) => sum + item.total, 0);
-    const tax = subtotal * TAX_RATE;
-    const total = subtotal + tax;
+    const subtotal = invoiceItems.reduce((sum, item) => sum + (item.baseTotal || item.total || 0), 0);
+    const tax      = invoiceItems.reduce((sum, item) => sum + (item.taxAmt || 0), 0);
+    const total    = subtotal + tax;
 
     if (subtotalEl) subtotalEl.textContent = formatCurrency(subtotal);
     if (taxEl)      taxEl.textContent      = formatCurrency(tax);
@@ -63,13 +64,19 @@ document.addEventListener('DOMContentLoaded', () => {
       addedItemsList.innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:12px 0;">No items added yet.</p>';
     } else {
       invoiceItems.forEach((item, index) => {
+        const gstValue = item.gst !== undefined ? item.gst : 18;
+        const dispTotal = (item.baseTotal || item.total || 0) + (item.taxAmt || 0);
+
         const row = document.createElement('div');
         row.className = 'added-item';
         row.innerHTML = `
-          <span class="i-name">${item.name}</span>
+          <div class="i-info">
+            <span class="i-name">${item.name}</span>
+            <span class="i-meta">${gstValue}% GST</span>
+          </div>
           <span class="i-qty">${item.qty}</span>
           <span class="i-price">${formatCurrency(item.price)}</span>
-          <span class="i-total">${formatCurrency(item.total)}</span>
+          <span class="i-total">${formatCurrency(dispTotal)}</span>
           <button class="btn-icon-circular text-danger remove-item-btn" data-index="${index}" title="Remove Item">
             <i class="fa-solid fa-xmark"></i>
           </button>`;
@@ -90,22 +97,48 @@ document.addEventListener('DOMContentLoaded', () => {
     recalculateTotals();
   }
 
+  const customGstInput   = document.getElementById('customGstInput');
+
+  if (invoiceItemGst && customGstInput) {
+    invoiceItemGst.addEventListener('change', () => {
+      if (invoiceItemGst.value === 'custom') {
+        customGstInput.style.display = 'block';
+        customGstInput.focus();
+      } else {
+        customGstInput.style.display = 'none';
+      }
+    });
+  }
+
   if (addItemBtn) {
     addItemBtn.addEventListener('click', () => {
       const name  = invoiceItemName ? invoiceItemName.value.trim() : '';
       const qty   = invoiceItemQty  ? parseFloat(invoiceItemQty.value)  : 0;
       const price = invoiceItemPrice ? parseFloat(invoiceItemPrice.value) : 0;
+      
+      let gstStr = invoiceItemGst ? invoiceItemGst.value : '0';
+      if (gstStr === 'custom' && customGstInput) {
+        gstStr = customGstInput.value;
+      }
+      const gst = parseFloat(gstStr) || 0;
 
       if (!name) { showToast('Please enter an item name.', 'error'); return; }
       if (isNaN(qty)   || qty <= 0)   { showToast('Quantity must be > 0.', 'error'); return; }
       if (isNaN(price) || price <= 0) { showToast('Price must be > 0.', 'error'); return; }
 
-      invoiceItems.push({ name, qty, price, total: qty * price });
+      const baseTotal = qty * price;
+      const taxAmt    = baseTotal * (gst / 100);
+
+      invoiceItems.push({ name, qty, price, gst, baseTotal, taxAmt });
 
       // Clear inputs
       if (invoiceItemName)  invoiceItemName.value  = '';
-      if (invoiceItemQty)   invoiceItemQty.value   = '';
+      if (invoiceItemQty)   invoiceItemQty.value   = '1';
       if (invoiceItemPrice) invoiceItemPrice.value = '';
+      if (invoiceItemGst) {
+        invoiceItemGst.value = '18';
+        if (customGstInput) customGstInput.style.display = 'none';
+      }
 
       invoiceItemName && invoiceItemName.focus();
       renderItems();
@@ -130,50 +163,44 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('Please select a client!', 'error'); return;
       }
 
-      // Build a simple printable invoice
-      const subtotal = invoiceItems.reduce((s, i) => s + i.total, 0);
-      const tax = subtotal * TAX_RATE;
+      // Calculate totals
+      const subtotal = invoiceItems.reduce((s, i) => s + i.baseTotal, 0);
+      const tax = invoiceItems.reduce((s, i) => s + i.taxAmt, 0);
       const total = subtotal + tax;
+      const invNoVal = 'INV-' + Math.floor(1000 + Math.random() * 9000);
+      const dateVal = invoiceDate ? invoiceDate.value : new Date().toISOString().split('T')[0];
 
-      const rows = invoiceItems.map(i => `
-        <tr>
-          <td>${i.name}</td>
-          <td style="text-align:center">${i.qty}</td>
-          <td style="text-align:right">₹${i.price.toLocaleString('en-IN')}</td>
-          <td style="text-align:right">₹${i.total.toLocaleString('en-IN')}</td>
-        </tr>`).join('');
+      // Save Invoice to History BEFORE opening window (safer)
+      saveInvoiceToHistory({
+        invNo: invNoVal,
+        date: dateVal,
+        client: client,
+        items: [...invoiceItems],
+        subtotal,
+        tax,
+        total,
+        status: 'Sent'
+      });
+
+      addNotification('Invoice Generated', `Invoice ${invNoVal} created for ${client}.`, 'success');
+      showToast('Invoice generated!', 'success');
 
       const printWin = window.open('', '_blank', 'width=800,height=900');
+      if (!printWin) {
+        showToast('Print window blocked. Invoice was saved to history.', 'warning');
+        return;
+      }
+      
       printWin.document.write(`
         <!DOCTYPE html><html><head><title>Invoice – ${client}</title>
-        <style>
-          body { font-family: Inter, sans-serif; padding: 40px; color: #111; }
-          h1   { font-size: 28px; color: #6366f1; margin-bottom: 4px; }
-          .meta { color: #666; font-size: 13px; margin-bottom: 32px; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
-          th { background: #f3f4f6; font-weight: 700; }
-          .totals { margin-top: 24px; text-align: right; font-size: 14px; }
-          .totals div { margin-bottom: 6px; }
-          .grand { font-size: 18px; font-weight: 700; color: #6366f1; }
-        </style></head><body>
-        <h1>BizCore Invoice</h1>
-        <div class="meta">
-          <div><strong>Client:</strong> ${client}</div>
-          <div><strong>Date:</strong> ${invoiceDate ? invoiceDate.value : '--'}</div>
-        </div>
-        <table>
-          <thead><tr><th>Description</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <div class="totals">
-          <div><strong>Subtotal:</strong> ₹${subtotal.toLocaleString('en-IN')}</div>
-          <div><strong>Tax (18%):</strong> ₹${tax.toLocaleString('en-IN', {maximumFractionDigits:0})}</div>
-          <div class="grand"><strong>Grand Total:</strong> ₹${total.toLocaleString('en-IN', {maximumFractionDigits:0})}</div>
-        </div>
+...
         <script>window.onload = () => { window.print(); }<\/script>
         </body></html>`);
       printWin.document.close();
+      
+      // Clear current builder items if successfully generated
+      invoiceItems = [];
+      renderItems();
     });
   }
 
@@ -281,11 +308,13 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.setItem('bizcore_profile', JSON.stringify(profileData));
       showToast('Business Profile updated successfully!', 'success');
       
-      // Update sidebar/topbar name if changed
+      // Update sidebar/topbar brand name if changed
       if (profileData.name) {
-        document.querySelectorAll('.user-name, .t-user-name').forEach(el => {
+        document.querySelectorAll('.brand-name').forEach(el => {
           el.textContent = profileData.name;
         });
+        const mobileBrandSpan = document.querySelector('.mobile-brand span');
+        if (mobileBrandSpan) mobileBrandSpan.textContent = profileData.name;
       }
     });
   }
@@ -298,12 +327,102 @@ document.addEventListener('DOMContentLoaded', () => {
     if (profileGSTIN)   profileGSTIN.value   = savedProfile.gstin  || '';
     if (profileAddress) profileAddress.value = savedProfile.address || '';
     
-    // Set UI name
+    // Set UI brand name
     if (savedProfile.name) {
-      document.querySelectorAll('.user-name, .t-user-name').forEach(el => {
+      document.querySelectorAll('.brand-name').forEach(el => {
         el.textContent = savedProfile.name;
       });
+      const mobileBrandSpan = document.querySelector('.mobile-brand span');
+      if (mobileBrandSpan) mobileBrandSpan.textContent = savedProfile.name;
     }
+  }
+
+  /* ── Business Logo Upload ── */
+  const uploadLogoBtn = document.getElementById('uploadLogoBtn');
+  const removeLogoBtn = document.getElementById('removeLogoBtn');
+  const logoFileInput = document.getElementById('logoFileInput');
+  const pLogoImg      = document.getElementById('pLogoImg');
+  const pLogoIcon     = document.getElementById('pLogoIcon');
+
+  function applyLogo(dataUrl) {
+    if (!dataUrl) return;
+    if (pLogoImg)  { pLogoImg.src = dataUrl; pLogoImg.style.display = 'block'; }
+    if (pLogoIcon) pLogoIcon.style.display = 'none';
+    if (removeLogoBtn) removeLogoBtn.style.display = 'block';
+
+    // Removed avatar updating so user profile avatars stay intact
+
+    
+    // Apply to Desktop Sidebar Logo
+    const sidebarLogo = document.querySelector('.brand-logo');
+    if (sidebarLogo) {
+       sidebarLogo.innerHTML = `<img src="${dataUrl}" style="width:100%; height:100%; object-fit:contain; border-radius:8px;">`;
+    }
+    
+    // Apply to Mobile Topbar Logo
+    const mobileBrandI = document.querySelector('.mobile-brand i');
+    if (mobileBrandI) {
+       mobileBrandI.outerHTML = `<img src="${dataUrl}" class="mobile-logo-img" style="height:24px; width:24px; border-radius:4px; object-fit:cover; margin-right:8px;">`;
+    } else {
+       const mobileLogoImg = document.querySelector('.mobile-logo-img');
+       if (mobileLogoImg) mobileLogoImg.src = dataUrl;
+    }
+  }
+
+  // Restore saved logo on page load
+  const savedLogo = localStorage.getItem('bizcore_logo');
+  if (savedLogo) applyLogo(savedLogo);
+
+  if (uploadLogoBtn && logoFileInput) {
+    uploadLogoBtn.addEventListener('click', () => logoFileInput.click());
+    logoFileInput.addEventListener('change', () => {
+      const file = logoFileInput.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        showToast('Please select a valid image file.', 'error');
+        return;
+      }
+      if (file.size > 2 * 1024 * 1024) {
+        showToast('Logo must be smaller than 2 MB.', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        localStorage.setItem('bizcore_logo', dataUrl);
+        applyLogo(dataUrl);
+        showToast('Logo uploaded successfully!', 'success');
+      };
+      reader.readAsDataURL(file);
+      logoFileInput.value = '';
+    });
+  }
+
+  if (removeLogoBtn) {
+    removeLogoBtn.addEventListener('click', () => {
+      localStorage.removeItem('bizcore_logo');
+      if (pLogoImg)  { pLogoImg.src = ''; pLogoImg.style.display = 'none'; }
+      if (pLogoIcon) pLogoIcon.style.display = '';
+      removeLogoBtn.style.display = 'none';
+      showToast('Logo removed.', 'info');
+
+      // Trigger Auth Session Check to refresh user avatars/names
+      if (window.Auth && window.Auth.checkSession) {
+        window.Auth.checkSession();
+      }
+
+
+      // Reset brand logos
+      const sidebarLogo = document.querySelector('.brand-logo');
+      if (sidebarLogo) {
+        sidebarLogo.innerHTML = `<span class="logo-icon"><i class="fa-solid fa-chart-network"></i></span>`;
+      }
+      
+      const mobileLogoImg = document.querySelector('.mobile-logo-img');
+      if (mobileLogoImg) {
+        mobileLogoImg.outerHTML = `<i class="fa-solid fa-chart-network"></i>`;
+      }
+    });
   }
 
   /* ============================================================
@@ -322,11 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function loadBankAccounts() {
     const saved = localStorage.getItem('bizcore_bank_accounts');
     if (saved) return JSON.parse(saved);
-    return [
-      { id: 'ba1', name: 'Bank 1', balance: 0, accountNo: '**** **** 1234', isPrimary: true },
-      { id: 'ba2', name: 'Bank 2', balance: 0, accountNo: '**** **** 5678', isPrimary: false },
-      { id: 'ba3', name: 'Bank 3', balance: 0, accountNo: '**** **** 9012', isPrimary: false }
-    ];
+    return []; // No default accounts, fresh start
   }
 
   function saveBankAccounts() {
@@ -383,6 +498,8 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       txnTableBody.insertBefore(tr, noResultsEl);
     });
+
+    if (typeof updateDashboardBalances === 'function') updateDashboardBalances();
   }
 
   // Initial render for transactions
@@ -400,18 +517,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.createElement('div');
     modal.id = 'bankDeleteModal';
     modal.style.cssText = `
-      position:fixed; inset:0; background:rgba(0,0,0,0.55);
-      display:flex; align-items:center; justify-content:center; z-index:10000;`;
+      position:fixed; inset:0; background:rgba(220, 38, 38, 0.25); backdrop-filter: blur(4px);
+      display:flex; align-items:center; justify-content:center; z-index:10000; transition: all 0.3s ease;`;
     modal.innerHTML = `
-      <div style="background:var(--card-bg,#fff); border-radius:16px; padding:28px; width:380px; max-width:95vw; box-shadow:0 20px 60px rgba(0,0,0,0.3); text-align:center;">
-        <i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; font-size:40px; margin-bottom:16px;"></i>
-        <h3 style="margin:0 0 12px; font-size:18px; font-weight:700;">Delete Account?</h3>
-        <p style="font-size:14px; color:var(--text-muted); margin-bottom:24px;">
-          Are you sure you want to delete <strong>${accName}</strong>? This action cannot be undone.
+      <div style="background:var(--card-bg,#fff); border: 2px solid #ef4444; border-radius:16px; padding:32px; width:400px; max-width:95vw; box-shadow:0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(239, 68, 68, 0.2); text-align:center; position:relative; overflow:hidden;">
+        <div style="position:absolute; top:0; left:0; right:0; height:6px; background:#ef4444;"></div>
+        <div style="background: rgba(239, 68, 68, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+          <i class="fa-solid fa-trash-can" style="color:#ef4444; font-size:36px;"></i>
+        </div>
+        <h3 style="margin:0 0 12px; font-size:20px; font-weight:800; color: #ef4444;">Delete Account Permanently?</h3>
+        <p style="font-size:14px; color:var(--text-muted); margin-bottom:24px; line-height: 1.5;">
+          You are about to delete <strong>${accName}</strong>. This action will completely wipe this account from your records and <strong>cannot be undone</strong>.
         </p>
-        <div style="display:flex; gap:10px;">
-          <button id="delAccConfirm" class="btn" style="flex:1; background:#ef4444; color:#fff; border:none; font-weight:600;">Yes, Delete</button>
-          <button id="delAccCancel" class="btn btn-outline" style="flex:1;">Cancel</button>
+        <div style="display:flex; gap:12px;">
+          <button id="delAccCancel" class="btn btn-outline" style="flex:1; padding: 12px; font-size: 14px; font-weight: 600;">Cancel</button>
+          <button id="delAccConfirm" class="btn" style="flex:1; background:#ef4444; color:#fff; border:none; padding: 12px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);">Yes, Delete It</button>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -483,6 +603,48 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // ── Render Dashboard Balances ──
+  function updateDashboardBalances() {
+    const dashTotalBank = document.getElementById('dashTotalBank');
+    const dashTotalCash = document.getElementById('dashTotalCash');
+
+    const totalBank = bankAccounts.filter(a => !a.accountType || a.accountType === 'bank').reduce((sum, a) => sum + (parseFloat(a.balance) || 0), 0);
+    const totalCash = bankAccounts.filter(a => a.accountType === 'cash').reduce((sum, a) => sum + (parseFloat(a.balance) || 0), 0);
+
+    if (dashTotalBank) dashTotalBank.textContent = '₹' + totalBank.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    if (dashTotalCash) dashTotalCash.textContent = '₹' + totalCash.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+    
+    // Income & Expense
+    const dashIncome = document.getElementById('dashTotalIncome');
+    const dashExpense = document.getElementById('dashTotalExpense');
+    
+    if (dashIncome) {
+      const totalIncome = transactions.filter(t => t.type === 'Income').reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+      dashIncome.dataset.value = totalIncome;
+      dashIncome.textContent = '₹' + totalIncome.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
+    
+    if (dashExpense) {
+      const totalExpense = transactions.filter(t => t.type === 'Expense').reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+      dashExpense.dataset.value = totalExpense;
+      dashExpense.textContent = '₹' + totalExpense.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
+
+    // Purchase & Sales
+    const dashPurchase = document.getElementById('dashTotalPurchase');
+    const dashSales = document.getElementById('dashTotalSales');
+
+    if (dashPurchase) {
+      const totalPurchase = transactions.filter(t => t.type === 'Expense' && (t.category === 'Purchase' || t.category === 'Purchases')).reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+      dashPurchase.textContent = '₹' + totalPurchase.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
+
+    if (dashSales) {
+      const totalSales = transactions.filter(t => t.type === 'Income' && (t.category === 'Sales' || t.category === 'Sale')).reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+      dashSales.textContent = '₹' + totalSales.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
+  }
+
   // ── Render ──
   function renderBankAccounts() {
     if (!bankingGrid) return;
@@ -543,6 +705,8 @@ document.addEventListener('DOMContentLoaded', () => {
         incomeBankSelect.appendChild(opt);
       }
     });
+
+    updateDashboardBalances();
   }
 
   // Event Delegation for Bank Account Actions
@@ -661,6 +825,29 @@ document.addEventListener('DOMContentLoaded', () => {
   renderBankAccounts();
 
   /* ============================================================
+     5.5. ADMIN PANEL ACTIONS
+     ============================================================ */
+  const viewAdmin = document.getElementById('view-admin');
+  if (viewAdmin) {
+    viewAdmin.addEventListener('click', (e) => {
+      // Handle the '...' action buttons on the Users table
+      const actionBtn = e.target.closest('.btn-icon-circular');
+      if (actionBtn) {
+        const row = actionBtn.closest('tr');
+        const userName = row ? row.querySelector('.u-name').textContent : 'User';
+        showToast(`User settings for ${userName} are locked in this demo mode.`, 'warning');
+      }
+
+      // Handle the 'Export System Audit' button
+      const exportBtn = e.target.closest('.header-actions .btn-outline');
+      if (exportBtn) {
+        showToast('Generating System Audit report...', 'info');
+        setTimeout(() => showToast('Audit.csv downloaded successfully.', 'success'), 1500);
+      }
+    });
+  }
+
+  /* ============================================================
      6. TOAST NOTIFICATION HELPER
      ============================================================ */
   let toastTimeout;
@@ -685,6 +872,7 @@ document.addEventListener('DOMContentLoaded', () => {
     clearTimeout(toastTimeout);
     toastTimeout = setTimeout(() => toast.classList.remove('active'), 3500);
   }
+  window.showToast = showToast;
 
   /* ============================================================
      7. INCOME FORM — CASCADING + INVOICE BUILDER
@@ -897,13 +1085,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function processIncome(amount) {
     if (!amount || amount <= 0) return;
     
-    // Update Dashboard Total Income
-    const dashIncome = document.getElementById('dashTotalIncome');
-    if (dashIncome) {
-      let currentTotal = parseFloat(dashIncome.dataset.value || '0') + amount;
-      dashIncome.dataset.value = currentTotal;
-      dashIncome.textContent = '₹' + currentTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 });
-    }
+    // Dashboard Total Income will automatically recalculate on renderTransactions
 
     // Update specific Bank Account if selected
     const mode = incomeModeSelect ? incomeModeSelect.value : '';
@@ -929,11 +1111,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const tDate = new Date().toISOString().split('T')[0];
     const tId = 'TXN-' + Math.floor(100000 + Math.random() * 900000);
 
+    let catText = 'Sales';
+    const typeSelect = document.getElementById('incomeTypeSelect');
+    if (typeSelect && typeSelect.value) {
+      catText = typeSelect.options[typeSelect.selectedIndex].text;
+    }
+
     const newTxn = {
       id: tId,
       date: tDate,
       description: desc,
-      category: 'Sales',
+      category: catText,
       amount: amount,
       type: 'Income',
       status: 'Completed'
@@ -1081,78 +1269,6 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ─────────────────── INVOICE BUILDER BUTTONS ─────────────────── */
   if (invGenerateBtn) {
     invGenerateBtn.addEventListener('click', () => {
-      if (invItems.length === 0) { showToast('Add at least one item before generating.', 'error'); return; }
-
-      const subtotal = invItems.reduce((s, i) => s + i.baseTotal, 0);
-      const taxAmt   = invItems.reduce((s, i) => s + i.taxAmt, 0);
-      const grand    = subtotal + taxAmt;
-      const rows     = invItems.map((item, idx) => `
-        <tr>
-          <td>${idx + 1}</td>
-          <td>${item.name}</td>
-          <td style="text-align:center;">${item.qty}</td>
-          <td style="text-align:right;">₹${item.unitPrice.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
-          <td style="text-align:center;">${item.gst}%</td>
-          <td style="text-align:right;">₹${item.taxAmt.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
-          <td style="text-align:right; font-weight:700;">₹${(item.baseTotal + item.taxAmt).toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
-        </tr>`).join('');
-
-      const dateVal = invDate ? invDate.value : new Date().toISOString().split('T')[0];
-      const invNoVal = invNo  ? invNo.value   : 'INV-0001';
-      const descVal  = incomeDescription ? incomeDescription.value : '';
-
-      const win = window.open('', '_blank', 'width=860,height=1000');
-      win.document.write(`<!DOCTYPE html><html><head><title>Invoice ${invNoVal}</title>
-      <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1a1a2e; background:#fff; }
-        .inv-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:32px; border-bottom:3px solid #6366f1; padding-bottom:20px; }
-        .brand { font-size:26px; font-weight:800; color:#6366f1; }
-        .brand small { display:block; font-size:13px; font-weight:400; color:#888; }
-        .inv-meta { text-align:right; font-size:13px; color:#555; line-height:1.8; }
-        .inv-meta strong { color:#1a1a2e; }
-        table { width:100%; border-collapse:collapse; margin:24px 0; font-size:13px; }
-        th { background:#6366f1; color:#fff; padding:10px 14px; text-align:left; font-weight:600; }
-        td { padding:10px 14px; border-bottom:1px solid #eee; }
-        tr:nth-child(even) td { background:#f8f8ff; }
-        .totals { width:280px; margin-left:auto; font-size:14px; }
-        .totals div { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eee; }
-        .grand { font-size:18px; font-weight:800; color:#6366f1; border-top:2px solid #6366f1 !important; margin-top:4px; padding-top:8px !important; border-bottom:none !important; }
-        .note { margin-top:40px; font-size:12px; color:#999; text-align:center; }
-        @media print { body { padding: 20px; } }
-      </style></head><body>
-      <div class="inv-header">
-        <div>
-          <div class="brand">BizCore <small>Business Management Suite</small></div>
-          ${descVal ? `<p style="margin-top:8px;font-size:13px;color:#555;">${descVal}</p>` : ''}
-        </div>
-        <div class="inv-meta">
-          <strong>INVOICE</strong><br>
-          No: ${invNoVal}<br>
-          Date: ${dateVal}<br>
-        </div>
-      </div>
-      <table>
-        <thead><tr><th>#</th><th>Item / Service</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:center">GST%</th><th style="text-align:right">GST Amt</th><th style="text-align:right">Total</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <div class="totals">
-        <div><span>Subtotal</span><span>₹${subtotal.toLocaleString('en-IN',{minimumFractionDigits:2})}</span></div>
-        <div><span>Total GST</span><span>₹${taxAmt.toLocaleString('en-IN',{minimumFractionDigits:2})}</span></div>
-        <div class="grand"><span>Grand Total</span><span>₹${grand.toLocaleString('en-IN',{minimumFractionDigits:2})}</span></div>
-      </div>
-      <p class="note">Thank you for your business! — Generated by BizCore</p>
-      <script>window.onload=()=>window.print();<\/script>
-      </body></html>`);
-      win.document.close();
-
-      showToast('Invoice generated!', 'success');
-    });
-  }
-
-  /* Invoice Action Handlers */
-  if (invGenerateBtn) {
-    invGenerateBtn.addEventListener('click', () => {
       if (invItems.length === 0) {
         showToast('Please add at least one item to generate invoice.', 'warning');
         return;
@@ -1176,56 +1292,54 @@ document.addEventListener('DOMContentLoaded', () => {
           <td style="text-align:right; font-weight:700;">₹${(item.baseTotal + item.taxAmt).toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
         </tr>`).join('');
 
-      const dateVal = invDate ? invDate.value : new Date().toISOString().split('T')[0];
-      const invNoVal = invNo  ? invNo.value   : 'INV-0001';
-      const descVal  = incomeDescription ? incomeDescription.value : '';
+      const dateVal  = invDate ? invDate.value : new Date().toISOString().split('T')[0];
+      const invNoVal  = invNo  ? invNo.value   : 'INV-0001';
+      const descVal   = incomeDescription ? incomeDescription.value : '';
+
+      // Pull Receiver/Client details
+      let clientInfo = 'Client';
+      if (incomeReceivableSelect && incomeReceivableSelect.value) {
+        const receivers = getReceivers();
+        const rec = receivers.find(r => String(r.id) === String(incomeReceivableSelect.value));
+        if (rec) {
+          clientInfo = `<strong>${rec.name}</strong>${rec.mobile ? '<br>' + rec.mobile : ''}${rec.address ? '<br>' + rec.address : ''}`;
+        }
+      }
+
+      // Pull Business Profile from localStorage
+      const profile   = JSON.parse(localStorage.getItem('bizcore_profile') || '{}');
+      const logo = localStorage.getItem('bizcore_logo') || '';
+      const bName    = profile.name    || 'BizCore';
+      const bGSTIN   = profile.gstin   || '';
+      const bAddress = profile.address || '';
+      const logoHtml = logo ? `<img src="${logo}" style="max-height:70px; max-width:140px; object-fit:contain; margin-bottom:12px; display:block;" alt="Logo" />` : '';
+
+      // Save rich invoice data to history BEFORE opening window (safer)
+      saveInvoiceToHistory({
+        invNo: invNoVal,
+        date: dateVal,
+        client: clientInfo.replace(/<[^>]*>?/gm, ' '), // strip html for summary
+        items: [...invItems],
+        subtotal,
+        tax: taxAmt,
+        total: grand,
+        status: 'Paid'
+      });
+
+      addNotification('Payment Recorded', `Invoice ${invNoVal} generated and payment recorded successfully.`, 'success');
+      showToast('Invoice generated!', 'success');
 
       const win = window.open('', '_blank', 'width=860,height=1000');
-      win.document.write(`<!DOCTYPE html><html><head><title>Invoice ${invNoVal}</title>
-      <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1a1a2e; background:#fff; }
-        .inv-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:32px; border-bottom:3px solid #6366f1; padding-bottom:20px; }
-        .brand { font-size:26px; font-weight:800; color:#6366f1; }
-        .brand small { display:block; font-size:13px; font-weight:400; color:#888; }
-        .inv-meta { text-align:right; font-size:13px; color:#555; line-height:1.8; }
-        .inv-meta strong { color:#1a1a2e; }
-        table { width:100%; border-collapse:collapse; margin:24px 0; font-size:13px; }
-        th { background:#6366f1; color:#fff; padding:10px 14px; text-align:left; font-weight:600; }
-        td { padding:10px 14px; border-bottom:1px solid #eee; }
-        tr:nth-child(even) td { background:#f8f8ff; }
-        .totals { width:280px; margin-left:auto; font-size:14px; }
-        .totals div { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eee; }
-        .grand { font-size:18px; font-weight:800; color:#6366f1; border-top:2px solid #6366f1 !important; margin-top:4px; padding-top:8px !important; border-bottom:none !important; }
-        .note { margin-top:40px; font-size:12px; color:#999; text-align:center; }
-        @media print { body { padding: 20px; } }
-      </style></head><body>
-      <div class="inv-header">
-        <div>
-          <div class="brand">BizCore <small>Business Management Suite</small></div>
-          ${descVal ? `<p style="margin-top:8px;font-size:13px;color:#555;">${descVal}</p>` : ''}
-        </div>
-        <div class="inv-meta">
-          <strong>INVOICE</strong><br>
-          No: ${invNoVal}<br>
-          Date: ${dateVal}<br>
-        </div>
-      </div>
-      <table>
-        <thead><tr><th>#</th><th>Item / Service</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:center">GST%</th><th style="text-align:right">GST Amt</th><th style="text-align:right">Total</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table>
-      <div class="totals">
-        <div><span>Subtotal</span><span>₹${subtotal.toLocaleString('en-IN',{minimumFractionDigits:2})}</span></div>
-        <div><span>Total GST</span><span>₹${taxAmt.toLocaleString('en-IN',{minimumFractionDigits:2})}</span></div>
-        <div class="grand"><span>Grand Total</span><span>₹${grand.toLocaleString('en-IN',{minimumFractionDigits:2})}</span></div>
-      </div>
-      <p class="note">Thank you for your business! — Generated by BizCore</p>
-      <script>window.onload=()=>window.print();<\/script>
-      </body></html>`);
-      win.document.close();
+      if (win) {
+        win.document.write(`<!DOCTYPE html><html><head><title>Invoice ${invNoVal}</title>
+...
+        <script>window.onload=()=>window.print();<\/script>
+        </body></html>`);
+        win.document.close();
+      } else {
+        showToast('Print window blocked. Invoice saved to records.', 'warning');
+      }
 
-      showToast('Invoice generated & Income Recorded!', 'success');
       resetFullIncomeForm();
     });
   }
@@ -1255,6 +1369,407 @@ document.addEventListener('DOMContentLoaded', () => {
       renderInvItems();
     });
   }
+
+  /* ============================================================
+     8. HISTORICAL INVOICES & REPORTS
+     ============================================================ */
+  const invTableBody   = document.querySelector('#invTable tbody');
+  const invSearchInput = document.getElementById('invSearch');
+
+  function loadInvoices() {
+    return JSON.parse(localStorage.getItem('bizcore_invoices') || '[]');
+  }
+  function saveInvoices(list) {
+    localStorage.setItem('bizcore_invoices', JSON.stringify(list));
+  }
+
+  function saveInvoiceToHistory(invObj) {
+    const list = loadInvoices();
+    list.unshift(invObj);
+    saveInvoices(list);
+    renderInvoiceList();
+    renderReports();
+  }
+
+  function renderInvoiceList() {
+    if (!invTableBody) return;
+    const allInvoices = loadInvoices();
+    const query = invSearchInput ? invSearchInput.value.toLowerCase() : '';
+
+    // Filter
+    const filtered = allInvoices.filter(inv => 
+      inv.invNo.toLowerCase().includes(query) || 
+      inv.client.toLowerCase().includes(query)
+    );
+
+    // Clear except the 'no results' row
+    Array.from(invTableBody.children).forEach(child => {
+      if (child.id !== 'invNoResults') child.remove();
+    });
+
+    const noResultsEl = document.getElementById('invNoResults');
+    if (filtered.length === 0) {
+      if (noResultsEl) noResultsEl.style.display = '';
+      return;
+    }
+    if (noResultsEl) noResultsEl.style.display = 'none';
+
+    filtered.forEach(inv => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${inv.date}</td>
+        <td style="font-weight:700; color:var(--accent);">${inv.invNo}</td>
+        <td>${inv.client}</td>
+        <td style="font-weight:700;">₹${inv.total.toLocaleString('en-IN')}</td>
+        <td>
+          <select class="form-control small-status" onchange="updateInvoiceStatus('${inv.invNo}', this.value)">
+            <option value="Paid" ${inv.status === 'Paid' ? 'selected' : ''}>Paid</option>
+            <option value="Sent" ${inv.status === 'Sent' ? 'selected' : ''}>Sent</option>
+            <option value="Void" ${inv.status === 'Void' ? 'selected' : ''}>Void</option>
+          </select>
+        </td>
+        <td style="display:flex; gap:8px;">
+          <button class="btn btn-outline small" onclick="window.printPastInvoice('${inv.invNo}')" title="Print"><i class="fa-solid fa-print"></i></button>
+          <button class="btn btn-outline small text-danger" onclick="deleteInvoice('${inv.invNo}')" title="Delete"><i class="fa-solid fa-trash-can"></i></button>
+        </td>
+      `;
+      invTableBody.appendChild(row);
+    });
+  }
+
+  window.deleteInvoice = function(invNo) {
+    if (!confirm(`Are you sure you want to delete Invoice ${invNo}? This cannot be undone.`)) return;
+    const list = loadInvoices();
+    const newList = list.filter(i => i.invNo !== invNo);
+    saveInvoices(newList);
+    renderInvoiceList();
+    addNotification('Invoice Deleted', `Invoice ${invNo} has been removed from history.`, 'warning');
+  };
+
+  window.updateInvoiceStatus = function(invNo, newStatus) {
+    const list = loadInvoices();
+    const inv = list.find(i => i.invNo === invNo);
+    if (inv) {
+      inv.status = newStatus;
+      saveInvoices(list);
+      addNotification('Status Updated', `Invoice ${invNo} marked as ${newStatus}.`, 'info');
+      renderInvoiceList();
+    }
+  };
+
+  if (invSearchInput) {
+    invSearchInput.addEventListener('input', renderInvoiceList);
+  }
+
+  // Support printing past invoices
+  window.printPastInvoice = function(invNo) {
+    const inv = loadInvoices().find(i => i.invNo === invNo);
+    if (!inv) return;
+    
+    // Re-use logic for generating the HTML
+    const profile = JSON.parse(localStorage.getItem('bizcore_profile') || '{}');
+    const logo = localStorage.getItem('bizcore_logo') || '';
+    const bName = profile.name || 'BizCore';
+    const bGSTIN = profile.gstin || '';
+    const bAddress = profile.address || '';
+    const logoHtml = logo ? `<img src="${logo}" style="max-height:70px; max-width:140px; object-fit:contain; margin-bottom:12px; display:block;" alt="Logo" />` : '';
+
+    const rows = inv.items.map((item, idx) => `
+      <tr>
+        <td>${item.name}</td>
+        <td style="text-align:center">${item.qty}</td>
+        <td style="text-align:right">₹${item.price.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+        <td style="text-align:center">${item.gst}%</td>
+        <td style="text-align:right">₹${item.taxAmt.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+        <td style="text-align:right">₹${(item.baseTotal + item.taxAmt).toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+      </tr>`).join('');
+
+    const win = window.open('', '_blank', 'width=860,height=1000');
+    win.document.write(`<!DOCTYPE html><html><head><title>Invoice ${inv.invNo}</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1a1a2e; line-height: 1.5; }
+      .inv-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:32px; border-bottom:3px solid #6366f1; padding-bottom:20px; }
+      .biz-info h1 { font-size: 26px; font-weight: 800; color: #6366f1; margin: 0; }
+      .biz-info p { margin: 2px 0 0; font-size: 13px; color: #555; }
+      .inv-meta { text-align:right; font-size:13px; color:#555; }
+      .inv-meta strong { color:#1a1a2e; font-size: 20px; display: block; margin-bottom: 4px; }
+      table { width:100%; border-collapse:collapse; margin:24px 0; font-size:13px; }
+      th { background:#6366f1; color:#fff; padding:12px 14px; text-align:left; font-weight:600; }
+      td { padding:12px 14px; border-bottom:1px solid #eee; }
+      tr:nth-child(even) td { background:#f8f8ff; }
+      .totals { width:300px; margin-left:auto; font-size:14px; }
+      .totals div { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #eee; }
+      .grand { font-size:20px; font-weight:800; color:#6366f1; border-top:2px solid #6366f1 !important; padding-top:10px !important; border-bottom:none !important; }
+      @media print { body { padding: 20px; } }
+    </style></head><body>
+    <div class="inv-header">
+      <div class="biz-info">
+        ${logoHtml}
+        <h1>${bName}</h1>
+        ${bGSTIN ? `<p><strong>GSTIN:</strong> ${bGSTIN}</p>` : ''}
+        ${bAddress ? `<p>${bAddress}</p>` : ''}
+      </div>
+      <div class="inv-meta">
+        <strong>INVOICE</strong>
+        No: ${inv.invNo}<br>
+        Date: ${inv.date}
+      </div>
+    </div>
+    <div style="margin-bottom:32px;"><strong>Bill To:</strong><br>${inv.client}</div>
+    <table>
+      <thead><tr><th>Items</th><th style="text-align:center">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:center">GST%</th><th style="text-align:right">GST Amt</th><th style="text-align:right">Total</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="totals">
+      <div><span>Subtotal</span><span>₹${inv.subtotal.toLocaleString('en-IN',{minimumFractionDigits:2})}</span></div>
+      <div><span>Total Tax</span><span>₹${inv.tax.toLocaleString('en-IN',{minimumFractionDigits:2})}</span></div>
+      <div class="grand"><span>Grand Total</span><span>₹${inv.total.toLocaleString('en-IN',{minimumFractionDigits:2})}</span></div>
+    </div>
+    <script>window.onload=()=>window.print();<\/script>
+    </body></html>`);
+    win.document.close();
+  };
+
+  /* ============================================================
+     REPORTS & ANALYTICS LOGIC
+     ============================================================ */
+  const reportPeriodSelect = document.getElementById('reportPeriodSelect');
+
+  function renderReports() {
+    const revenueEl = document.getElementById('repTotalRevenue');
+    const netEl     = document.getElementById('repNetProfit');
+    const taxEl     = document.getElementById('repTotalTax');
+    const expEl     = document.getElementById('repTotalExpense');
+    const chartCont = document.getElementById('analyticsChartContainer');
+    const incCatList = document.getElementById('categoryBreakdownList');
+    const expCatList = document.getElementById('expenseBreakdownList');
+
+    if (!revenueEl) return;
+
+    const period = reportPeriodSelect ? reportPeriodSelect.value : 'month';
+    const now    = new Date();
+    const curMonth = now.getMonth();
+    const curYear  = now.getFullYear();
+
+    // 1. Calculate Period Totals
+    const filteredTxns = transactions.filter(t => {
+      if (period === 'year') return true;
+      const tDate = new Date(t.date);
+      return tDate.getMonth() === curMonth && tDate.getFullYear() === curYear;
+    });
+
+    let rev = 0, exp = 0, tax = 0;
+    const incCatMap = {};
+    const expCatMap = {};
+
+    filteredTxns.forEach(t => {
+      if (t.type === 'Income') {
+        rev += t.amount;
+        incCatMap[t.category] = (incCatMap[t.category] || 0) + t.amount;
+      } else {
+        exp += t.amount;
+        expCatMap[t.category] = (expCatMap[t.category] || 0) + t.amount;
+      }
+    });
+
+    // Tax from invoices
+    const allInvoices = loadInvoices();
+    allInvoices.forEach(inv => {
+      const iDate = new Date(inv.date);
+      if (period === 'month') {
+        if (iDate.getMonth() === curMonth && iDate.getFullYear() === curYear) tax += inv.tax;
+      } else {
+        tax += inv.tax;
+      }
+    });
+
+    revenueEl.textContent = formatCurrency(rev);
+    expEl.textContent     = formatCurrency(exp);
+    taxEl.textContent     = formatCurrency(tax);
+    netEl.textContent     = formatCurrency(rev - exp);
+
+    // 2. Render Category Breakdowns
+    const renderCatList = (listEl, map, total, isIncome) => {
+      if (!listEl) return;
+      listEl.innerHTML = '';
+      const fallbackTotal = total || 1;
+      const sortedKeys = Object.keys(map).sort((a,b) => map[b] - map[a]);
+      
+      if (sortedKeys.length === 0) {
+        listEl.innerHTML = '<div style="font-size:12px; color:var(--text-muted); text-align:center; padding:10px;">No data recorded yet.</div>';
+        return;
+      }
+
+      sortedKeys.forEach(cat => {
+        const perc = Math.round((map[cat] / fallbackTotal) * 100);
+        const item = document.createElement('div');
+        item.innerHTML = `
+          <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;">
+            <span>${cat}</span>
+            <span style="font-weight:700;">₹${map[cat].toLocaleString('en-IN')} (${perc}%)</span>
+          </div>
+          <div style="height:6px; background:var(--bg-active); border-radius:3px; overflow:hidden;">
+            <div style="height:100%; width:${perc}%; background:${isIncome ? 'var(--accent)' : 'var(--danger)'};"></div>
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+    };
+
+    renderCatList(incCatList, incCatMap, rev, true);
+    renderCatList(expCatList, expCatMap, exp, false);
+
+    // 3. Render 6-Month Trend Chart
+    if (chartCont) {
+      chartCont.innerHTML = '';
+      const months = [];
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({
+          label: monthNames[d.getMonth()],
+          m: d.getMonth(),
+          y: d.getFullYear(),
+          revenue: 0,
+          expense: 0
+        });
+      }
+
+      transactions.forEach(t => {
+        const tDate = new Date(t.date);
+        const mObj = months.find(obj => obj.m === tDate.getMonth() && obj.y === tDate.getFullYear());
+        if (mObj) {
+          if (t.type === 'Income') mObj.revenue += t.amount;
+          else mObj.expense += t.amount;
+        }
+      });
+
+      const maxVal = Math.max(...months.map(m => Math.max(m.revenue, m.expense)), 1000);
+
+      months.forEach(m => {
+        const revH = (m.revenue / maxVal) * 100;
+        const expH = (m.expense / maxVal) * 100;
+        const barGroup = document.createElement('div');
+        barGroup.className = 'chart-bar-group';
+        barGroup.innerHTML = `
+          <div class="chart-bars">
+            <div class="chart-bar" style="height:${revH}%; background:var(--accent);" data-value="₹${m.revenue.toLocaleString('en-IN')}"></div>
+            <div class="chart-bar" style="height:${expH}%; background:var(--danger);" data-value="₹${m.expense.toLocaleString('en-IN')}"></div>
+          </div>
+          <div style="font-size:11px; color:var(--text-secondary); font-weight:600;">${m.label}</div>
+        `;
+        chartCont.appendChild(barGroup);
+      });
+    }
+  }
+
+  if (reportPeriodSelect) {
+    reportPeriodSelect.addEventListener('change', renderReports);
+  }
+
+  // Initial Renders
+  renderInvoiceList();
+  renderReports();
+
+  window.addEventListener('bizRouteChanged', (e) => {
+    if (e.detail.route === 'invoices') renderInvoiceList();
+    if (e.detail.route === 'reports') renderReports();
+    // Close notif dropdown on route change
+    if (notifDropdown) notifDropdown.classList.remove('active');
+  });
+
+  /* ============================================================
+     9. NOTIFICATION SYSTEM LOGIC
+     ============================================================ */
+  const notifBtn       = document.getElementById('notifBtn');
+  const notifDropdown  = document.getElementById('notifDropdown');
+  const notifList      = document.getElementById('notifList');
+  const notifCount     = document.getElementById('notifCount');
+  const clearNotifsBtn = document.getElementById('clearNotifsBtn');
+
+  function loadNotifications() {
+    return JSON.parse(localStorage.getItem('bizcore_notifications') || '[]');
+  }
+  function saveNotifications(list) {
+    localStorage.setItem('bizcore_notifications', JSON.stringify(list));
+  }
+
+  window.addNotification = function(title, msg, type = 'info') {
+    const list = loadNotifications();
+    const newNotif = {
+      id: Date.now(),
+      title,
+      msg,
+      type,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      read: false
+    };
+    list.unshift(newNotif);
+    saveNotifications(list.slice(0, 20)); // Keep last 20
+    renderNotifications();
+  };
+
+  function renderNotifications() {
+    if (!notifList) return;
+    const list = loadNotifications();
+    const unreadCount = list.filter(n => !n.read).length;
+
+    if (notifCount) {
+      notifCount.textContent = unreadCount;
+      notifCount.style.display = unreadCount > 0 ? 'flex' : 'none';
+    }
+
+    if (list.length === 0) {
+      notifList.innerHTML = '<div class="notif-empty">No new notifications</div>';
+      return;
+    }
+
+    notifList.innerHTML = list.map(n => `
+      <div class="notif-item ${n.read ? '' : 'unread'}" onclick="markNotifAsRead(${n.id})">
+        <span class="notif-title">${n.title}</span>
+        <span class="notif-msg">${n.msg}</span>
+        <span class="notif-time">${n.time}</span>
+      </div>
+    `).join('');
+  }
+
+  window.markNotifAsRead = function(id) {
+    const list = loadNotifications();
+    const n = list.find(x => x.id === id);
+    if (n) n.read = true;
+    saveNotifications(list);
+    renderNotifications();
+  };
+
+  if (notifBtn) {
+    notifBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      notifDropdown.classList.toggle('active');
+    });
+  }
+
+  if (clearNotifsBtn) {
+    clearNotifsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      saveNotifications([]);
+      renderNotifications();
+    });
+  }
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', () => {
+    if (notifDropdown) notifDropdown.classList.remove('active');
+  });
+
+  // Initial Check: If first time, add a welcome notification
+  const allNotifs = loadNotifications();
+  if (allNotifs.length === 0) {
+    addNotification('Welcome to BizCore!', 'Start by setting up your business profile and adding a bank account.', 'info');
+  }
+
+  renderNotifications();
 
   /* ============================================================
      8. EXPENSE FORM — CASCADING
@@ -1492,13 +2007,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // Update Dashboard Total Expense
-      const dashExpense = document.getElementById('dashTotalExpense');
-      if (dashExpense) {
-        let currentTotal = parseFloat(dashExpense.dataset.value || '0') + amount;
-        dashExpense.dataset.value = currentTotal;
-        dashExpense.textContent = '₹' + currentTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 });
-      }
+      // Dashboard Total Expense will automatically recalculate on renderTransactions
 
       let desc = document.getElementById('expenseDescription') ? document.getElementById('expenseDescription').value : '';
       if (!desc) {
@@ -1508,11 +2017,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const tDate = new Date().toISOString().split('T')[0];
       const tId = 'TXN-' + Math.floor(100000 + Math.random() * 900000);
 
+      let catText = 'Expenses';
+      const typeSelectExp = document.getElementById('expenseTypeSelect');
+      if (typeSelectExp && typeSelectExp.value) {
+        catText = typeSelectExp.options[typeSelectExp.selectedIndex].text;
+      }
+
       const newTxn = {
         id: tId,
         date: tDate,
         description: desc,
-        category: 'Expenses',
+        category: catText,
         amount: amount,
         type: 'Expense',
         status: 'Completed'
