@@ -5,6 +5,19 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
+  /* ============================================================
+     USER-SCOPED STORAGE — isolates every user's data by email
+     ============================================================ */
+  function _userKey(key) {
+    const session = localStorage.getItem('bizcore_session');
+    const email = session ? JSON.parse(session).email : 'guest';
+    return `${key}__${email}`;
+  }
+  function _getItem(key) { return localStorage.getItem(_userKey(key)); }
+  function _setItem(key, val) { localStorage.setItem(_userKey(key), val); }
+  function _removeItem(key) { localStorage.removeItem(_userKey(key)); }
+
+
   // Auto-dismiss welcome message after 5 seconds
   const welcomeCard = document.querySelector('.welcome-card');
   if (welcomeCard) {
@@ -207,13 +220,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (saveDraftBtn) {
     saveDraftBtn.addEventListener('click', () => {
       const draft = { client: clientSelect ? clientSelect.value : '', date: invoiceDate ? invoiceDate.value : '', items: invoiceItems };
-      localStorage.setItem('bizcore_draft_invoice', JSON.stringify(draft));
+      _setItem('bizcore_draft_invoice', JSON.stringify(draft));
       showToast('Draft saved! Reload the page to restore.', 'success');
     });
   }
 
   // Restore draft on load
-  const draft = JSON.parse(localStorage.getItem('bizcore_draft_invoice') || 'null');
+  const draft = JSON.parse(_getItem('bizcore_draft_invoice') || 'null');
   if (draft) {
     if (clientSelect && draft.client)  clientSelect.value = draft.client;
     if (invoiceDate  && draft.date)    invoiceDate.value  = draft.date;
@@ -305,7 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
         address: profileAddress ? profileAddress.value : ''
       };
 
-      localStorage.setItem('bizcore_profile', JSON.stringify(profileData));
+      _setItem('bizcore_profile', JSON.stringify(profileData));
       showToast('Business Profile updated successfully!', 'success');
       
       // Update sidebar/topbar brand name if changed
@@ -320,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Restore Profile on load
-  const savedProfile = JSON.parse(localStorage.getItem('bizcore_profile') || 'null');
+  const savedProfile = JSON.parse(_getItem('bizcore_profile') || 'null');
   if (savedProfile) {
     if (profileName)    profileName.value    = savedProfile.name   || '';
     if (profileType)    profileType.value    = savedProfile.type   || '';
@@ -370,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Restore saved logo on page load
-  const savedLogo = localStorage.getItem('bizcore_logo');
+  const savedLogo = _getItem('bizcore_logo');
   if (savedLogo) applyLogo(savedLogo);
 
   if (uploadLogoBtn && logoFileInput) {
@@ -389,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const dataUrl = e.target.result;
-        localStorage.setItem('bizcore_logo', dataUrl);
+        _setItem('bizcore_logo', dataUrl);
         applyLogo(dataUrl);
         showToast('Logo uploaded successfully!', 'success');
       };
@@ -400,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (removeLogoBtn) {
     removeLogoBtn.addEventListener('click', () => {
-      localStorage.removeItem('bizcore_logo');
+      _removeItem('bizcore_logo');
       if (pLogoImg)  { pLogoImg.src = ''; pLogoImg.style.display = 'none'; }
       if (pLogoIcon) pLogoIcon.style.display = '';
       removeLogoBtn.style.display = 'none';
@@ -439,26 +452,26 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function loadBankAccounts() {
-    const saved = localStorage.getItem('bizcore_bank_accounts');
+    const saved = _getItem('bizcore_bank_accounts');
     if (saved) return JSON.parse(saved);
     return []; // No default accounts, fresh start
   }
 
   function saveBankAccounts() {
-    localStorage.setItem('bizcore_bank_accounts', JSON.stringify(bankAccounts));
+    _setItem('bizcore_bank_accounts', JSON.stringify(bankAccounts));
   }
 
   let bankAccounts = loadBankAccounts();
 
   // ── Transactions Storage ──
   function loadTransactions() {
-    const saved = localStorage.getItem('bizcore_transactions');
+    const saved = _getItem('bizcore_transactions');
     if (saved) return JSON.parse(saved);
     return []; // No default transactions
   }
 
   function saveTransactions() {
-    localStorage.setItem('bizcore_transactions', JSON.stringify(transactions));
+    _setItem('bizcore_transactions', JSON.stringify(transactions));
   }
 
   let transactions = loadTransactions();
@@ -925,10 +938,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ─────────────────── RECEIVER HELPERS ─────────────────── */
   function getReceivers() {
-    return JSON.parse(localStorage.getItem('bizcore_receivers') || '[]');
+    return JSON.parse(_getItem('bizcore_receivers') || '[]');
   }
   function saveReceivers(list) {
-    localStorage.setItem('bizcore_receivers', JSON.stringify(list));
+    _setItem('bizcore_receivers', JSON.stringify(list));
   }
   function renderReceiverDropdown(autoSelectId = null) {
     if (!incomeReceivableSelect) return;
@@ -1162,8 +1175,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Auto invoice number
       if (invNo) {
-        const seq = (parseInt(localStorage.getItem('bizcore_inv_seq') || '0') + 1);
-        localStorage.setItem('bizcore_inv_seq', seq);
+        const seq = (parseInt(_getItem('bizcore_inv_seq') || '0') + 1);
+        _setItem('bizcore_inv_seq', seq);
         invNo.value = 'INV-' + String(seq).padStart(4, '0');
       }
 
@@ -1307,8 +1320,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Pull Business Profile from localStorage
-      const profile   = JSON.parse(localStorage.getItem('bizcore_profile') || '{}');
-      const logo = localStorage.getItem('bizcore_logo') || '';
+      const profile   = JSON.parse(_getItem('bizcore_profile') || '{}');
+      const logo = _getItem('bizcore_logo') || '';
       const bName    = profile.name    || 'BizCore';
       const bGSTIN   = profile.gstin   || '';
       const bAddress = profile.address || '';
@@ -1377,10 +1390,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const invSearchInput = document.getElementById('invSearch');
 
   function loadInvoices() {
-    return JSON.parse(localStorage.getItem('bizcore_invoices') || '[]');
+    return JSON.parse(_getItem('bizcore_invoices') || '[]');
   }
   function saveInvoices(list) {
-    localStorage.setItem('bizcore_invoices', JSON.stringify(list));
+    _setItem('bizcore_invoices', JSON.stringify(list));
   }
 
   function saveInvoiceToHistory(invObj) {
@@ -1467,8 +1480,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!inv) return;
     
     // Re-use logic for generating the HTML
-    const profile = JSON.parse(localStorage.getItem('bizcore_profile') || '{}');
-    const logo = localStorage.getItem('bizcore_logo') || '';
+    const profile = JSON.parse(_getItem('bizcore_profile') || '{}');
+    const logo = _getItem('bizcore_logo') || '';
     const bName = profile.name || 'BizCore';
     const bGSTIN = profile.gstin || '';
     const bAddress = profile.address || '';
@@ -1690,10 +1703,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const clearNotifsBtn = document.getElementById('clearNotifsBtn');
 
   function loadNotifications() {
-    return JSON.parse(localStorage.getItem('bizcore_notifications') || '[]');
+    return JSON.parse(_getItem('bizcore_notifications') || '[]');
   }
   function saveNotifications(list) {
-    localStorage.setItem('bizcore_notifications', JSON.stringify(list));
+    _setItem('bizcore_notifications', JSON.stringify(list));
   }
 
   window.addNotification = function(title, msg, type = 'info') {
@@ -1797,10 +1810,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Helpers
   function getPayables() {
-    return JSON.parse(localStorage.getItem('bizcore_payables') || '[]');
+    return JSON.parse(_getItem('bizcore_payables') || '[]');
   }
   function savePayables(list) {
-    localStorage.setItem('bizcore_payables', JSON.stringify(list));
+    _setItem('bizcore_payables', JSON.stringify(list));
   }
   function renderPayableDropdown(autoSelectId = null) {
     if (!expensePayableSelect) return;
