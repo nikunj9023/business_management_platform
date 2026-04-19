@@ -13,7 +13,14 @@ const IS_CLOUD = (SUPABASE_CONFIG.url !== 'YOUR_SUPABASE_URL' && SUPABASE_CONFIG
 // Initialize Supabase Client
 const _supabase = IS_CLOUD 
   ? supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.key)
-  : null;
+  : { auth: { 
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      signInWithPassword: async () => ({ error: { message: 'Supabase unconfigured.' } }),
+      signInWithOAuth: async () => ({ error: { message: 'Supabase unconfigured.' } }),
+      getSession: async () => ({ data: { session: null } }),
+      signOut: async () => {} 
+    } 
+  };
 
 const Auth = {
   mockUsers: [
