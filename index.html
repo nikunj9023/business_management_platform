@@ -101,7 +101,7 @@
             <span class="nav-label">Reports & Analytics</span>
             <span class="nav-arrow"><i class="fa-solid fa-chevron-right"></i></span>
           </a>
-          </ul>
+          <!-- Added missing ul opener for reports if needed, or just removed extra closer -->
         </li>
 
         <!-- Admin Panel (Admin Only) -->
@@ -532,12 +532,15 @@
           </div>
 
           <!-- Step 3: Description + Price (appears after mode selected) -->
-          <div id="incomeDetailsContainer" style="display:none;">
-            <div class="form-group mb-4">
-              <label>Description</label>
-              <div class="input-with-icon">
-                <i class="fa-solid fa-note-sticky"></i>
-                <input type="text" id="incomeDescription" class="form-control" placeholder="e.g. Payment for services rendered…" />
+          <div id="incomeDetailsContainer" style="display:none; margin-top:16px;">
+            <div class="form-row" style="display:flex; gap:16px; margin-bottom:12px;">
+              <div style="flex:1;">
+                <label class="form-label">Transaction Date</label>
+                <input type="date" id="incomeDate" class="form-control">
+              </div>
+              <div style="flex:2;">
+                <label class="form-label">Description / Note</label>
+                <input type="text" id="incomeDescription" class="form-control" placeholder="e.g. Project Payment">
               </div>
             </div>
             <div class="form-group mb-4">
@@ -769,12 +772,15 @@
           </div>
 
           <!-- Step 3: Description + Price (appears after mode selected) -->
-          <div id="expenseDetailsContainer" style="display:none;">
-            <div class="form-group mb-4">
-              <label>Description</label>
-              <div class="input-with-icon">
-                <i class="fa-solid fa-note-sticky"></i>
-                <input type="text" id="expenseDescription" class="form-control" placeholder="e.g. Office Supplies…" />
+          <div id="expenseDetailsContainer" style="display:none; margin-top:16px;">
+            <div class="form-row" style="display:flex; gap:16px; margin-bottom:12px;">
+              <div style="flex:1;">
+                <label class="form-label">Transaction Date</label>
+                <input type="date" id="expenseDate" class="form-control">
+              </div>
+              <div style="flex:2;">
+                <label class="form-label">Description / Reference</label>
+                <input type="text" id="expenseDescription" class="form-control" placeholder="e.g. Office Rent">
               </div>
             </div>
             <div class="form-group mb-4">

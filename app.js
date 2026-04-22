@@ -246,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
       addNotification('Invoice Generated', `Invoice ${invNoVal} created for ${client}.`, 'success');
       showToast('Invoice generated!', 'success');
 
-      const printWin = window.open('', '_blank', 'width=800,height=900');
+      const printWin = window.open('', '_blank');
       if (!printWin) {
         showToast('Print window blocked. Invoice was saved to history.', 'warning');
         return;
@@ -1042,6 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (incomeModeSelect)    incomeModeSelect.value    = '';
     if (incomeDescription)   incomeDescription.value   = '';
     if (incomePrice)         incomePrice.value         = '';
+    if (incomeDate)          incomeDate.value          = new Date().toISOString().split('T')[0];
     if (incomeModeContainer) incomeModeContainer.style.display = 'none';
     hideAllModeContainers();
     hideDetailsAndButtons();
@@ -1182,7 +1183,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return true;
   }
 
-  function processIncome(amount) {
+  async function processIncome(amount) {
     if (!amount || amount <= 0) return;
     
     // Dashboard Total Income will automatically recalculate on renderTransactions
@@ -1202,23 +1203,29 @@ document.addEventListener('DOMContentLoaded', () => {
       // Update cash account balance if a real account is selected
       const cashSel = document.getElementById('incomeCashSelect');
       const cashId  = cashSel ? cashSel.value : '';
+      let cAcc;
       if (cashId && cashId !== 'main') {
-        let cAcc = bankAccounts.find(a => String(a.id) === String(cashId));
-        if (cAcc) {
-          cAcc.balance += amount;
-          saveBankAccounts();
-          renderBankAccounts();
-        }
+        cAcc = bankAccounts.find(a => String(a.id) === String(cashId));
+      } else {
+        // Fallback to "Main Cash" check
+        cAcc = bankAccounts.find(a => a.accountType === 'cash' && (a.id === 'main' || a.name.toLowerCase().includes('cash')));
+      }
+      
+      if (cAcc) {
+        cAcc.balance += amount;
+        saveBankAccounts();
+        renderBankAccounts();
       }
     }
 
     // Record Transaction
     let desc = document.getElementById('incomeDescription') ? document.getElementById('incomeDescription').value : '';
+    const dateVal = document.getElementById('incomeDate') ? document.getElementById('incomeDate').value : '';
     if (!desc) {
       desc = mode === 'bank' ? 'Bank Transfer' : (mode === 'cash' ? 'Cash Payment' : 'Recorded Income');
     }
 
-    const tDate = new Date().toISOString().split('T')[0];
+    const tDate = dateVal || new Date().toISOString().split('T')[0];
     const tId = 'TXN-' + Math.floor(100000 + Math.random() * 900000);
 
     let catText = 'Sales';
@@ -1238,8 +1245,14 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     transactions.push(newTxn);
-    if (typeof saveTransactions === 'function') saveTransactions();
-    if (typeof renderTransactions === 'function') renderTransactions();
+    await Db.saveTransaction(newTxn);
+    await saveTransactions(); // Keep internal state in sync
+    renderTransactions();
+    updateDashboardBalances();
+
+    if (window.addNotification) {
+      window.addNotification('Income Recorded', `Income of ₹${amount} recorded and accounts updated.`, 'success');
+    }
   }
 
   if (saveOnlyIncomeBtn) {
@@ -1439,7 +1452,7 @@ document.addEventListener('DOMContentLoaded', () => {
       addNotification('Payment Recorded', `Invoice ${invNoVal} generated and payment recorded successfully.`, 'success');
       showToast('Invoice generated!', 'success');
 
-      const win = window.open('', '_blank', 'width=860,height=1000');
+      const win = window.open('', '_blank');
       if (win) {
         win.document.write(`<!DOCTYPE html><html><head><title>Invoice ${invNoVal}</title>
 ...
@@ -1593,7 +1606,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td style="text-align:right">₹${(item.baseTotal + item.taxAmt).toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
       </tr>`).join('');
 
-    const win = window.open('', '_blank', 'width=860,height=1000');
+    const win = window.open('', '_blank');
     win.document.write(`<!DOCTYPE html><html><head><title>Invoice ${inv.invNo}</title>
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1795,10 +1808,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (r === 'income') {
       renderIncomeCashSelect();
       renderReceiverDropdown();
+      if (incomeDate) incomeDate.value = new Date().toISOString().split('T')[0];
     }
     if (r === 'expenses') {
       renderExpenseBankAndCash();
       renderPayableDropdown();
+      if (expenseDate) expenseDate.value = new Date().toISOString().split('T')[0];
     }
     // Close notif dropdown on route change
     if (notifDropdown) notifDropdown.classList.remove('active');
@@ -1976,6 +1991,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderBankAccounts = function() {
     originalRenderBankAccounts();
     renderExpenseBankAndCash();
+    renderIncomeCashSelect();
   };
   renderExpenseBankAndCash(); // Initial
 
@@ -2107,50 +2123,52 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function resetFullExpenseForm() {
-    if (expenseTypeSelect)  expenseTypeSelect.value  = '';
-    if (expenseModeSelect)  expenseModeSelect.value  = '';
-    if (expenseDescription) expenseDescription.value = '';
-    if (expensePrice)       expensePrice.value       = '';
+    if (expenseTypeSelect)    expenseTypeSelect.value    = '';
+    if (expenseModeSelect)    expenseModeSelect.value    = '';
+    if (expenseDescription)   expenseDescription.value   = '';
+    if (expensePrice)         expensePrice.value         = '';
+    if (expenseDate)          expenseDate.value          = new Date().toISOString().split('T')[0];
     if (expenseModeContainer) expenseModeContainer.style.display = 'none';
     hideAllExpenseModeContainers();
     hideExpenseDetails();
   }
 
   if (saveExpenseBtn) {
-    saveExpenseBtn.addEventListener('click', () => {
+    saveExpenseBtn.addEventListener('click', async () => {
       if (!validateExpenseForm()) return;
       
-      const amount = parseFloat(expensePrice ? expensePrice.value : '0');
-      if (!amount || amount <= 0) return;
+      const price = parseFloat(expensePrice ? expensePrice.value : '0');
+      if (!price || price <= 0) return;
       
       const mode = expenseModeSelect.value;
       const bankId = expenseBankSelect.value;
       const cashId = expenseCashSelect.value;
 
+      // Update Balance
       if (mode === 'bank' && bankId) {
         let bAcc = bankAccounts.find(a => String(a.id) === String(bankId));
         if (bAcc) {
-          bAcc.balance -= amount;
-          if (typeof saveBankAccounts === 'function') saveBankAccounts();
-          if (typeof renderBankAccounts === 'function') renderBankAccounts();
+          bAcc.balance -= price;
+          saveBankAccounts();
+          renderBankAccounts();
         }
       } else if (mode === 'cash' && cashId) {
         let cAcc = bankAccounts.find(a => String(a.id) === String(cashId));
         if (cAcc) {
-          cAcc.balance -= amount;
-          if (typeof saveBankAccounts === 'function') saveBankAccounts();
-          if (typeof renderBankAccounts === 'function') renderBankAccounts();
+          cAcc.balance -= price;
+          saveBankAccounts();
+          renderBankAccounts();
         }
       }
 
-      // Dashboard Total Expense will automatically recalculate on renderTransactions
-
-      let desc = document.getElementById('expenseDescription') ? document.getElementById('expenseDescription').value : '';
+      // Prepare Transaction
+      let desc = expenseDescription ? expenseDescription.value.trim() : '';
+      const dateVal = document.getElementById('expenseDate') ? document.getElementById('expenseDate').value : '';
       if (!desc) {
-        desc = document.getElementById('expenseTypeSelect') ? document.getElementById('expenseTypeSelect').options[document.getElementById('expenseTypeSelect').selectedIndex].text : 'Recorded Expense';
+        desc = mode === 'bank' ? 'Bank Purchase' : (mode === 'cash' ? 'Cash Purchase' : 'Expense Record');
       }
 
-      const tDate = new Date().toISOString().split('T')[0];
+      const tDate = dateVal || new Date().toISOString().split('T')[0];
       const tId = 'TXN-' + Math.floor(100000 + Math.random() * 900000);
 
       let catText = 'Expenses';
@@ -2164,16 +2182,24 @@ document.addEventListener('DOMContentLoaded', () => {
         date: tDate,
         description: desc,
         category: catText,
-        amount: amount,
+        amount: price,
         type: 'Expense',
         status: 'Completed'
       };
 
+      // 3. Save & Sync
       transactions.push(newTxn);
-      if (typeof saveTransactions === 'function') saveTransactions();
-      if (typeof renderTransactions === 'function') renderTransactions();
-      
-      showToast('Expense recorded successfully!', 'success');
+      await Db.saveTransaction(newTxn);
+      await saveTransactions(); // Sync internal list
+      renderTransactions();
+      updateDashboardBalances();
+
+      // 4. Notifications & UI
+      if (window.addNotification) {
+        window.addNotification('Expense Recorded', `Expense of ₹${price} recorded in ${mode}.`, 'info');
+      }
+
+      showToast(`Expense of ₹${price} recorded successfully!`, 'success');
       resetFullExpenseForm();
     });
   }
