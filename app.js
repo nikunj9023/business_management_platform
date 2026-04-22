@@ -541,14 +541,19 @@ document.addEventListener('DOMContentLoaded', () => {
     toRender.forEach(txn => {
       const tr = document.createElement('tr');
       
-      const badgeClass = txn.type === 'Income' ? 'badge-success' : 'badge-danger';
+      const isIncome = txn.type === 'Income';
+      const badgeClass = isIncome ? 'badge-success' : 'badge-danger';
+      const typeBadge = isIncome
+        ? '<span class="badge badge-success" style="font-size:11px;"><i class="fa-solid fa-circle-down"></i> Income</span>'
+        : '<span class="badge badge-danger" style="font-size:11px;"><i class="fa-solid fa-circle-up"></i> Expense</span>';
       
       tr.innerHTML = `
         <td>${txn.date}</td>
         <td><strong>${txn.id}</strong></td>
-        <td>${txn.description || 'Income/Sale'}</td>
-        <td>${txn.category || 'Sales'}</td>
-        <td style="font-weight:700;" class="${txn.type === 'Income' ? 'text-success' : ''}">₹${txn.amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
+        <td>${txn.description || (isIncome ? 'Income/Sale' : 'Expense')}</td>
+        <td>${txn.category || (isIncome ? 'Sales' : 'Expenses')}</td>
+        <td>${typeBadge}</td>
+        <td style="font-weight:700; color:${isIncome ? 'var(--success,#22c55e)' : 'var(--danger,#ef4444)'};">₹${txn.amount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</td>
         <td><span class="badge ${badgeClass}">${txn.status || 'Completed'}</span></td>
       `;
       txnTableBody.insertBefore(tr, noResultsEl);
@@ -1058,7 +1063,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (saveReceiverBtn) {
-    saveReceiverBtn.addEventListener('click', () => {
+    saveReceiverBtn.addEventListener('click', async () => {
       const name    = receiverNameInput    ? receiverNameInput.value.trim()    : '';
       const mobile  = receiverMobileInput  ? receiverMobileInput.value.trim()  : '';
       const address = receiverAddressInput ? receiverAddressInput.value.trim() : '';
@@ -1068,11 +1073,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       const newRec = { id: 'rec_' + Date.now(), name, mobile, address };
-      const list = getReceivers();
-      list.push(newRec);
-      saveReceivers(list);
+      await Db.saveReceiver(newRec);
       renderReceiverDropdown(newRec.id);
       if (addReceiverForm) addReceiverForm.style.display = 'none';
+      // Clear inputs
+      if (receiverNameInput)    receiverNameInput.value    = '';
+      if (receiverMobileInput)  receiverMobileInput.value  = '';
+      if (receiverAddressInput) receiverAddressInput.value = '';
       showToast('Receiver "' + name + '" saved & selected!', 'success');
     });
   }
@@ -1098,6 +1105,38 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  /* ─────────────────── INCOME CASH SELECT: populate from real accounts ─────────────────── */
+  function renderIncomeCashSelect() {
+    const incomeCashSel = document.getElementById('incomeCashSelect');
+    if (!incomeCashSel) return;
+    const cashAccounts = bankAccounts.filter(a => a.accountType === 'cash');
+    incomeCashSel.innerHTML = '<option value="" disabled selected>Select Cash Account</option>';
+    if (cashAccounts.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = 'main';
+      opt.textContent = 'Main Cash Box';
+      incomeCashSel.appendChild(opt);
+    } else {
+      cashAccounts.forEach(acc => {
+        const opt = document.createElement('option');
+        opt.value = acc.id;
+        opt.textContent = acc.name;
+        incomeCashSel.appendChild(opt);
+      });
+    }
+  }
+  renderIncomeCashSelect();
+
+  /* ─────────────────── RECEIVABLE SELECT: show details when valid item chosen ─────────────────── */
+  // Attach ONCE outside the mode-change listener to avoid stacking
+  if (incomeReceivableSelect) {
+    incomeReceivableSelect.addEventListener('change', () => {
+      if (incomeReceivableSelect.value && incomeReceivableSelect.value !== 'new') {
+        showDetailsAndButtons();
+      }
+    });
+  }
+
   /* ─────────────────── PAYMENT MODE → SUB-CONTAINER ─────────────────── */
   if (incomeModeSelect) {
     incomeModeSelect.addEventListener('change', () => {
@@ -1107,22 +1146,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const mode = incomeModeSelect.value;
       if (mode === 'bank' && incomeBankContainer) {
         incomeBankContainer.style.display = 'block';
-        showDetailsAndButtons();
+        // Only show details if a bank is already selected
+        if (incomeBankSelect && incomeBankSelect.value) showDetailsAndButtons();
       } else if (mode === 'cash' && incomeCashContainer) {
+        renderIncomeCashSelect();
         incomeCashContainer.style.display = 'block';
         showDetailsAndButtons();
       } else if (mode === 'receivable' && incomeReceivableContainer) {
         incomeReceivableContainer.style.display = 'block';
-        // Show details only when receiver is selected
-        if (incomeReceivableSelect) {
-          incomeReceivableSelect.addEventListener('change', function onRecSel() {
-            if (incomeReceivableSelect.value && incomeReceivableSelect.value !== 'new') {
-              showDetailsAndButtons();
-            }
-            // run once then keep watching
-          });
+        // Details shown via the dedicated listener above
+        if (incomeReceivableSelect && incomeReceivableSelect.value && incomeReceivableSelect.value !== 'new') {
+          showDetailsAndButtons();
         }
       }
+    });
+  }
+
+  /* ─────────────────── BANK SELECT: show details on selection ─────────────────── */
+  if (incomeBankSelect) {
+    incomeBankSelect.addEventListener('change', () => {
+      if (incomeBankSelect.value) showDetailsAndButtons();
     });
   }
 
@@ -1152,11 +1195,21 @@ document.addEventListener('DOMContentLoaded', () => {
       let bAcc = bankAccounts.find(a => String(a.id) === String(bankId));
       if (bAcc) {
         bAcc.balance += amount;
-        if (typeof saveBankAccounts === 'function') saveBankAccounts();
-        if (typeof renderBankAccounts === 'function') renderBankAccounts();
+        saveBankAccounts();
+        renderBankAccounts();
       }
     } else if (mode === 'cash') {
-      // Future hook: If Cash accounts exist specifically, track here.
+      // Update cash account balance if a real account is selected
+      const cashSel = document.getElementById('incomeCashSelect');
+      const cashId  = cashSel ? cashSel.value : '';
+      if (cashId && cashId !== 'main') {
+        let cAcc = bankAccounts.find(a => String(a.id) === String(cashId));
+        if (cAcc) {
+          cAcc.balance += amount;
+          saveBankAccounts();
+          renderBankAccounts();
+        }
+      }
     }
 
     // Record Transaction
@@ -1356,7 +1409,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Pull Receiver/Client details
       let clientInfo = 'Client';
       if (incomeReceivableSelect && incomeReceivableSelect.value) {
-        const receivers = getReceivers();
+        const receivers = await getReceivers(); // must await — async fn
         const rec = receivers.find(r => String(r.id) === String(incomeReceivableSelect.value));
         if (rec) {
           clientInfo = `<strong>${rec.name}</strong>${rec.mobile ? '<br>' + rec.mobile : ''}${rec.address ? '<br>' + rec.address : ''}`;
@@ -1734,8 +1787,19 @@ document.addEventListener('DOMContentLoaded', () => {
   renderReports();
 
   window.addEventListener('bizRouteChanged', (e) => {
-    if (e.detail.route === 'invoices') renderInvoiceList();
-    if (e.detail.route === 'reports') renderReports();
+    const r = e.detail.route;
+    if (r === 'invoices') renderInvoiceList();
+    if (r === 'reports') renderReports();
+    if (r === 'all-transactions') renderTransactions();
+    if (r === 'dashboard') updateDashboardBalances();
+    if (r === 'income') {
+      renderIncomeCashSelect();
+      renderReceiverDropdown();
+    }
+    if (r === 'expenses') {
+      renderExpenseBankAndCash();
+      renderPayableDropdown();
+    }
     // Close notif dropdown on route change
     if (notifDropdown) notifDropdown.classList.remove('active');
   });
@@ -1959,38 +2023,49 @@ document.addEventListener('DOMContentLoaded', () => {
       const mode = expenseModeSelect.value;
       if (mode === 'bank' && expenseBankContainer) {
         expenseBankContainer.style.display = 'block';
-        showExpenseDetails();
+        // Show details immediately if a bank is already pre-selected
+        if (expenseBankSelect && expenseBankSelect.value) showExpenseDetails();
       } else if (mode === 'cash' && expenseCashContainer) {
         expenseCashContainer.style.display = 'block';
         showExpenseDetails();
       } else if (mode === 'payable' && expensePayableContainer) {
         expensePayableContainer.style.display = 'block';
-        if (expensePayableSelect) {
-          expensePayableSelect.addEventListener('change', function onPaySel() {
-            if (expensePayableSelect.value && expensePayableSelect.value !== 'new') {
-              showExpenseDetails();
-            }
-          });
+        // Details shown via the dedicated expensePayableSelect listener below
+        if (expensePayableSelect && expensePayableSelect.value && expensePayableSelect.value !== 'new') {
+          showExpenseDetails();
         }
       }
     });
   }
 
+  /* ─────────────────── EXPENSE BANK SELECT: show details on selection ─────────────────── */
+  if (expenseBankSelect) {
+    expenseBankSelect.addEventListener('change', () => {
+      if (expenseBankSelect.value) showExpenseDetails();
+    });
+  }
+
+  /* ─────────────────── EXPENSE PAYABLE SELECT: show details when valid item chosen ─────────────────── */
+  // Attached ONCE here (not inside mode-change listener) to avoid stacking
   if (expensePayableSelect) {
     expensePayableSelect.addEventListener('change', () => {
-      if (expensePayableSelect.value === 'new') {
+      const val = expensePayableSelect.value;
+      if (val === 'new') {
+        // Show the inline add-payable form
         if (addPayableForm) addPayableForm.style.display = 'block';
         if (payableNameInput) payableNameInput.focus();
         expensePayableSelect.value = '';
         hideExpenseDetails();
-      } else {
+      } else if (val) {
+        // A real payable is selected — hide form, show details
         if (addPayableForm) addPayableForm.style.display = 'none';
+        showExpenseDetails();
       }
     });
   }
 
   if (savePayableBtn) {
-    savePayableBtn.addEventListener('click', () => {
+    savePayableBtn.addEventListener('click', async () => {
       const name = payableNameInput ? payableNameInput.value.trim() : '';
       const mobile = payableMobileInput ? payableMobileInput.value.trim() : '';
       const address = payableAddressInput ? payableAddressInput.value.trim() : '';
@@ -2000,11 +2075,13 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       const newPay = { id: 'pay_' + Date.now(), name, mobile, address };
-      const list = getPayables();
-      list.unshift(newPay); // Add to top since limit 5
-      savePayables(list);
+      await Db.savePayable(newPay);
       renderPayableDropdown(newPay.id);
       if (addPayableForm) addPayableForm.style.display = 'none';
+      // Clear inputs
+      if (payableNameInput)    payableNameInput.value    = '';
+      if (payableMobileInput)  payableMobileInput.value  = '';
+      if (payableAddressInput) payableAddressInput.value = '';
       showExpenseDetails();
       showToast('Payable "' + name + '" saved & selected!', 'success');
     });
