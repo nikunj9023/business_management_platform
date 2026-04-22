@@ -24,8 +24,8 @@ const _supabase = IS_CLOUD
 
 const Auth = {
   mockUsers: [
-    { email: 'admin@bizcore.com', password: 'password123', name: 'Admin', role: 'admin' },
-    { email: 'user@bizcore.com', password: 'password123', name: 'User', role: 'user' }
+    { id: 'admin-123', email: 'admin@bizcore.com', password: 'password123', name: 'Admin', role: 'admin' },
+    { id: 'user-456', email: 'user@bizcore.com', password: 'password123', name: 'User', role: 'user' }
   ],
 
   async init() {
@@ -138,5 +138,6 @@ const Auth = {
 };
 
 window._supabase = _supabase;
+window.IS_CLOUD = IS_CLOUD;
 document.addEventListener('DOMContentLoaded', () => Auth.init());
 window.Auth = Auth;

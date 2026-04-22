@@ -20,15 +20,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  let bankAccounts = [];
+  let transactions = [];
+  let invoices     = [];
+  let notifications = [];
+
+  function loadInvoices() { return invoices; }
+  function loadNotifications() { return notifications; }
+
   async function initAppData() {
     const user = await Auth.getCurrentUser();
     if (!user) return;
 
-    // Load all data from Supabase
-    [bankAccounts, transactions, invoices] = await Promise.all([
+    // Load all data from Supabase / Local Fallback
+    [bankAccounts, transactions, invoices, notifications] = await Promise.all([
       Db.getBankAccounts(),
       Db.getTransactions(),
-      Db.getInvoices()
+      Db.getInvoices(),
+      Db.getNotifications()
     ]);
 
     // Restore Profile & Logos
@@ -502,16 +511,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  let bankAccounts = [];
-
   // ── Transactions Storage ──
   async function saveTransactions() {
     for (const txn of transactions) {
       await Db.saveTransaction(txn);
     }
   }
-
-  let transactions = [];
 
   function renderTransactions() {
     const txnTableBody = document.querySelector('#txnTable tbody');
@@ -982,16 +987,16 @@ document.addEventListener('DOMContentLoaded', () => {
       for (const r of list) await Db.saveReceiver(r);
     }
   }
-  function renderReceiverDropdown(autoSelectId = null) {
+  async function renderReceiverDropdown(autoSelectId = null) {
     if (!incomeReceivableSelect) return;
     incomeReceivableSelect.innerHTML =
       '<option value="" disabled selected>Select Receiver</option>' +
       '<option value="new">+ Add New Receiver</option>';
-    const receivers = getReceivers();
+    const receivers = await getReceivers();
     if (receivers.length > 0) {
       const grp = document.createElement('optgroup');
       grp.label = 'Saved Receivers';
-      receivers.forEach(rec => {
+      receivers.slice(0, 5).forEach(rec => {
         const opt = document.createElement('option');
         opt.value = rec.id;
         opt.textContent = rec.name + (rec.mobile ? '  |  ' + rec.mobile : '');
@@ -1320,7 +1325,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ─────────────────── INVOICE BUILDER BUTTONS ─────────────────── */
   if (invGenerateBtn) {
-    invGenerateBtn.addEventListener('click', () => {
+    invGenerateBtn.addEventListener('click', async () => {
       if (invItems.length === 0) {
         showToast('Please add at least one item to generate invoice.', 'warning');
         return;
@@ -1513,7 +1518,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Support printing past invoices
-  window.printPastInvoice = function(invNo) {
+  window.printPastInvoice = async function(invNo) {
     const inv = loadInvoices().find(i => i.invNo === invNo);
     if (!inv) return;
     
@@ -1647,10 +1652,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const fallbackTotal = total || 1;
       const sortedKeys = Object.keys(map).sort((a,b) => map[b] - map[a]);
       
-      if (sortedKeys.length === 0) {
-        listEl.innerHTML = '<div style="font-size:12px; color:var(--text-muted); text-align:center; padding:10px;">No data recorded yet.</div>';
-        return;
-      }
+    if (sortedKeys.length === 0) {
+      listEl.innerHTML = `
+        <div style="font-size:12px; color:var(--text-muted); text-align:center; padding:30px 10px;">
+          <i class="fa-solid fa-chart-line" style="font-size:24px; display:block; margin-bottom:10px; opacity:0.3;"></i>
+          No data recorded yet for this period.
+        </div>`;
+      return;
+    }
 
       sortedKeys.forEach(cat => {
         const perc = Math.round((map[cat] / fallbackTotal) * 100);
@@ -1852,12 +1861,12 @@ document.addEventListener('DOMContentLoaded', () => {
       for (const p of list) await Db.savePayable(p);
     }
   }
-  function renderPayableDropdown(autoSelectId = null) {
+  async function renderPayableDropdown(autoSelectId = null) {
     if (!expensePayableSelect) return;
     expensePayableSelect.innerHTML =
       '<option value="" disabled selected>Select Payable</option>' +
       '<option value="new">+ Add New Payable</option>';
-    const payables = getPayables();
+    const payables = await getPayables();
     if (payables.length > 0) {
       const grp = document.createElement('optgroup');
       grp.label = 'Saved Payables';
